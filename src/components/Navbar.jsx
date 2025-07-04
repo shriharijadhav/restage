@@ -4,7 +4,7 @@ import { FiMenu } from 'react-icons/fi';
 import MobileSidebar from './MobileSidebar';
 import { MdLightMode, MdDarkMode } from 'react-icons/md';
 import { useSelector, useDispatch } from 'react-redux';
-import { setTheme } from '../features/preferencesSlice';
+import useAppTheme from '../utils/useAppTheme';
 import authService from '../utils/authService';
 import { NAVIGATION, ARIA_LABELS } from '../constants/strings';
 
@@ -13,25 +13,12 @@ function triggerAuthChanged() {
   window.dispatchEvent(new Event('authChanged'));
 }
 
-// Helper to get theme from localStorage or default
-function getInitialTheme() {
-  const stored = localStorage.getItem('theme');
-  return stored === 'light' || stored === 'dark' ? stored : 'dark';
-}
 
-// Apply theme to document body
-function applyTheme(theme) {
-  if (theme === 'dark') {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
-}
 
 // Fixed Navbar at the top of the app
 const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state) => state.user);
-  const theme = useSelector((state) => state.preferences.theme);
+  const { theme, changeTheme } = useAppTheme();
   const [effectiveTheme, setEffectiveTheme] = useState(() => {
     if (theme === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -40,7 +27,6 @@ const Navbar = () => {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   // Update state on login/logout via custom event
   useEffect(() => {
@@ -54,6 +40,8 @@ const Navbar = () => {
       window.removeEventListener('authChanged', handleAuthChange);
     };
   }, []);
+
+
 
   // Apply theme on mount and when theme changes
   useEffect(() => {
@@ -77,7 +65,7 @@ const Navbar = () => {
 
   // Theme toggle handler
   const toggleTheme = () => {
-    dispatch(setTheme(theme === 'dark' ? 'light' : 'dark'));
+    changeTheme(theme === 'dark' ? 'light' : 'dark', true);
   };
 
   return (
@@ -116,7 +104,7 @@ const Navbar = () => {
               >
                 {effectiveTheme === 'dark' ? <MdLightMode /> : <MdDarkMode />}
               </button>
-              {user && <><span className="hidden md:inline"><span className="font-semibold">{user.name}</span></span></>}
+              {user && <><span className="hidden md:inline"><span className="font-semibold">Hi, {user.name}</span></span></>}
               <button
                 onClick={handleLogout}
                 className="ml-4 px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"

@@ -1,18 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const getInitialTheme = () => {
-  const stored = localStorage.getItem('theme');
-  return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
-};
-
-const getInitialLanguage = () => {
-  const stored = localStorage.getItem('language');
-  return stored || 'en';
-};
-
 const initialState = {
-  theme: getInitialTheme(),
-  language: getInitialLanguage(),
+  theme: 'dark', // Default to dark theme
+  language: 'en',
 };
 
 const preferencesSlice = createSlice({
@@ -21,14 +11,20 @@ const preferencesSlice = createSlice({
   reducers: {
     setTheme(state, action) {
       state.theme = action.payload;
-      localStorage.setItem('theme', action.payload);
     },
     setLanguage(state, action) {
       state.language = action.payload;
-      localStorage.setItem('language', action.payload);
+    },
+    setPreferences(state, action) {
+      if (action.payload.theme !== undefined) {
+        state.theme = action.payload.theme;
+      }
+      if (action.payload.language !== undefined) {
+        state.language = action.payload.language;
+      }
     },
   },
 });
 
-export const { setTheme, setLanguage } = preferencesSlice.actions;
+export const { setTheme, setLanguage, setPreferences } = preferencesSlice.actions;
 export default preferencesSlice.reducer; 

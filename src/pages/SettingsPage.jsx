@@ -1,19 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { setTheme, setLanguage } from '../features/preferencesSlice';
-import { FiUser, FiShield, FiBell, FiSettings, FiGlobe, FiSave, FiX } from 'react-icons/fi';
+import { setLanguage } from '../features/preferencesSlice';
+import { updateProfile } from '../features/userSlice';
+import { FiUser, FiShield, FiBell, FiSettings, FiGlobe, FiSave, FiX, FiLock } from 'react-icons/fi';
+import userService from '../services/userService';
+import useAppTheme from '../utils/useAppTheme';
+import { useSnackbar } from '../contexts/SnackbarContext';
+import PasswordUpdateModal from '../components/PasswordUpdateModal';
+import { SETTINGS, COMMON, SUCCESS, AUTH } from '../constants/strings';
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const dispatch = useDispatch();
-  const theme = useSelector((state) => state.preferences.theme);
+  const { theme, changeTheme } = useAppTheme();
   const language = useSelector((state) => state.preferences.language);
+  const user = useSelector((state) => state.user.user);
+  const { showSuccess, showError, showInfo } = useSnackbar();
   const [settings, setSettings] = useState({
     profile: {
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      company: 'Tech Corp',
-      role: 'API Developer'
+      name: '',
+      email: '',
+      organization: '',
+      role: ''
     },
     preferences: {
       notifications: {
@@ -27,26 +35,103 @@ const SettingsPage = () => {
       sessionTimeout: 30
     }
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isProfileEditing, setIsProfileEditing] = useState(false);
 
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: <FiUser size={18} /> },
-    { id: 'preferences', label: 'Preferences', icon: <FiSettings size={18} /> },
-    { id: 'security', label: 'Security', icon: <FiShield size={18} /> },
-    { id: 'notifications', label: 'Notifications', icon: <FiBell size={18} /> }
+    { id: 'profile', label: SETTINGS.PROFILE, icon: <FiUser size={18} /> },
+    { id: 'preferences', label: SETTINGS.PREFERENCES, icon: <FiSettings size={18} /> },
+    { id: 'security', label: SETTINGS.SECURITY, icon: <FiShield size={18} /> },
+    { id: 'notifications', label: SETTINGS.NOTIFICATIONS, icon: <FiBell size={18} /> }
   ];
 
-  const handleSave = (section) => {
-    // Simulate saving settings
-    console.log(`Saving ${section} settings:`, settings[section]);
+  const handleTabChange = (tabId) => {
+    // Cancel edit mode if switching away from profile tab
+    if (activeTab === 'profile' && tabId !== 'profile' && isProfileEditing) {
+      handleCancelEdit();
+    }
+    setActiveTab(tabId);
   };
+
+  // Load user data when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      setSettings(prev => ({
+        ...prev,
+        profile: {
+          name: user.name || '',
+          email: user.email || '',
+          organization: user.organization || '',
+          role: user.role || ''
+        }
+      }));
+    }
+  }, [user]);
+
+
+
+  const handleSave = async (section) => {
+    if (section === 'profile') {
+      // Check if values have actually changed
+      const hasChanges = 
+        settings.profile.organization !== (user?.organization || '') ||
+        settings.profile.role !== (user?.role || '');
+      
+      if (!hasChanges) {
+        showInfo(SUCCESS.NO_CHANGES_TO_SAVE);
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      try {
+        const result = await userService.updateProfile({
+          organization: settings.profile.organization,
+          role: settings.profile.role
+        });
+        
+        if (result.success) {
+          dispatch(updateProfile(result.user));
+          showSuccess(result.message);
+          setIsProfileEditing(false); // Exit edit mode after successful save
+        } else {
+          showError(result.error);
+        }
+      } catch (error) {
+        showError('Failed to update profile');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Handle other sections (preferences, security, notifications)
+      console.log(`Saving ${section} settings:`, settings[section]);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    // Reset to original values
+    setSettings(prev => ({
+      ...prev,
+      profile: {
+        name: user?.name || '',
+        email: user?.email || '',
+        organization: user?.organization || '',
+        role: user?.role || ''
+      }
+    }));
+    setIsProfileEditing(false);
+  };
+
+
 
   return (
     <div className="min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{SETTINGS.SETTINGS}</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Manage your account preferences and security settings
+          {SETTINGS.SETTINGS_SUBTITLE}
         </p>
       </div>
 
@@ -59,7 +144,7 @@ const SettingsPage = () => {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
                     activeTab === tab.id
                       ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
@@ -80,60 +165,71 @@ const SettingsPage = () => {
             {/* Profile Settings */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Profile Information</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Update your personal information and account details.</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{SETTINGS.PROFILE_INFORMATION}</h2>
+                    <p className="text-gray-600 dark:text-gray-400">{SETTINGS.PROFILE_SUBTITLE}</p>
+                  </div>
+                  {!isProfileEditing && (
+                    <button
+                      onClick={() => setIsProfileEditing(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      <FiSettings size={16} />
+                      {SETTINGS.EDIT_PROFILE}
+                    </button>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Full Name
+                      {SETTINGS.FULL_NAME}
                     </label>
                     <input
                       type="text"
                       value={settings.profile.name}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        profile: { ...settings.profile, name: e.target.value }
-                      })}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      readOnly
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                     />
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Email Address
+                      {SETTINGS.EMAIL_ADDRESS}
                     </label>
                     <input
                       type="email"
                       value={settings.profile.email}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        profile: { ...settings.profile, email: e.target.value }
-                      })}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      readOnly
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                     />
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Company
+                      {SETTINGS.ORGANIZATION}
                     </label>
                     <input
                       type="text"
-                      value={settings.profile.company}
+                      value={settings.profile.organization}
                       onChange={(e) => setSettings({
                         ...settings,
-                        profile: { ...settings.profile, company: e.target.value }
+                        profile: { ...settings.profile, organization: e.target.value }
                       })}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      readOnly={!isProfileEditing}
+                      className={`w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isProfileEditing 
+                          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100' 
+                          : 'bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                      }`}
+                      placeholder={isProfileEditing ? "Enter your organization name" : ""}
                     />
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Role
+                      {SETTINGS.ROLE}
                     </label>
                     <input
                       type="text"
@@ -142,20 +238,46 @@ const SettingsPage = () => {
                         ...settings,
                         profile: { ...settings.profile, role: e.target.value }
                       })}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      readOnly={!isProfileEditing}
+                      className={`w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        isProfileEditing 
+                          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100' 
+                          : 'bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                      }`}
+                      placeholder={isProfileEditing ? "Enter your role" : ""}
                     />
                   </div>
                 </div>
                 
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => handleSave('profile')}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-                  >
-                    <FiSave size={16} />
-                    Save Changes
-                  </button>
-                </div>
+                {isProfileEditing && (
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <FiX size={16} />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSave('profile')}
+                      disabled={isLoading}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          {COMMON.SAVING}
+                        </>
+                      ) : (
+                        <>
+                          <FiSave size={16} />
+                          {SETTINGS.SAVE_CHANGES}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -163,20 +285,20 @@ const SettingsPage = () => {
             {activeTab === 'preferences' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Preferences</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Customize your experience and interface settings.</p>
+                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{SETTINGS.PREFERENCES_TITLE}</h2>
+                  <p className="text-gray-600 dark:text-gray-400">{SETTINGS.PREFERENCES_SUBTITLE}</p>
                 </div>
                 
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Theme
+                      {SETTINGS.THEME}
                     </label>
                     <div className="grid grid-cols-3 gap-3">
-                      {['light', 'dark', 'system'].map((t) => (
+                      {[SETTINGS.LIGHT, SETTINGS.DARK, SETTINGS.SYSTEM].map((t) => (
                         <button
                           key={t}
-                          onClick={() => dispatch(setTheme(t))}
+                          onClick={() => changeTheme(t, true)}
                           className={`p-4 rounded-lg border-2 transition-colors ${
                             theme === t
                               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -195,17 +317,17 @@ const SettingsPage = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Language
+                      {SETTINGS.LANGUAGE}
                     </label>
                     <select
                       value={language}
                       onChange={(e) => dispatch(setLanguage(e.target.value))}
                       className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
+                      <option value="en">{SETTINGS.ENGLISH}</option>
+                      <option value="es">{SETTINGS.SPANISH}</option>
+                      <option value="fr">{SETTINGS.FRENCH}</option>
+                      <option value="de">{SETTINGS.GERMAN}</option>
                     </select>
                   </div>
                 </div>
@@ -216,7 +338,7 @@ const SettingsPage = () => {
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
                   >
                     <FiSave size={16} />
-                    Save Changes
+                    {SETTINGS.SAVE_CHANGES}
                   </button>
                 </div>
               </div>
@@ -231,6 +353,40 @@ const SettingsPage = () => {
                 </div>
                 
                 <div className="space-y-6">
+                  {/* Password Update Section */}
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          <FiLock size={20} />
+                          Password
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          Update your account password to keep it secure
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setIsPasswordModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                      >
+                        <FiLock size={16} />
+                        {AUTH.CHANGE_PASSWORD}
+                      </button>
+                    </div>
+                    
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Last updated: {user?.passwordUpdatedAt ? 
+                        new Date(user.passwordUpdatedAt).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Never'}
+                    </div>
+                  </div>
+
+                  {/* Two-Factor Authentication */}
                   <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Two-Factor Authentication</h3>
@@ -253,6 +409,7 @@ const SettingsPage = () => {
                     </button>
                   </div>
                   
+                  {/* Session Timeout */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                       Session Timeout (minutes)
@@ -345,6 +502,12 @@ const SettingsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Password Update Modal */}
+      <PasswordUpdateModal 
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </div>
   );
 };

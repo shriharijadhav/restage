@@ -55,12 +55,13 @@ class AuthService {
     }
   }
 
-  async signup(name, email, password) {
+  async signup(name, email, password, organization = '') {
     try {
       const response = await api.post('/api/auth/signup', {
         name,
         email,
         password,
+        organization,
       });
 
       // Check auth to get user data

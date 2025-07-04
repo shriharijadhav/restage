@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import AuthPage from './pages/AuthPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import ProjectDetailsPage from './pages/ProjectDetailsPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -13,6 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/Layout/MainLayout';
 import useAppTheme from './utils/useAppTheme';
 import authService from './utils/authService';
+import { SnackbarProvider } from './contexts/SnackbarContext';
 
 // UnprotectedRoute: Redirects to /dashboard if already logged in
 function UnprotectedRoute() {
@@ -78,19 +80,19 @@ function RootRoute() {
 
   // If not authenticated, show welcome page
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-blue-200 py-12 px-4">
-      <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 hover:scale-105">
-        <h1 className="text-4xl font-bold text-center text-gray-900 mb-4">
+    <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-700">
+        <h1 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
           Welcome to Restage
         </h1>
-        <p className="text-center text-gray-600 mb-8 text-lg">
+        <p className="text-center text-gray-600 dark:text-gray-300 mb-8 text-lg">
           Restage helps you mock, document, and test your APIs with ease. 
           Please log in or register to get started.
         </p>
         <div className="flex justify-center space-x-4">
           <a
-            href="/login"
-            className="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
+            href="/auth"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
           >
             Get Started
           </a>
@@ -101,10 +103,18 @@ function RootRoute() {
 }
 
 function App() {
+  return (
+    <SnackbarProvider>
+      <AppContent />
+    </SnackbarProvider>
+  );
+}
+
+function AppContent() {
   useAppTheme();
   return (
-    // Overall app container: flex-col, min-h-screen, theme-aware
-    <div className="flex flex-col min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors">
+    /* Overall app container: flex-col, min-h-screen, theme-aware */
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors">
       {/* Fixed Navbar at the top (h-16) */}
       <Navbar />
       {/* Content area below Navbar, may contain sidebar + main content or just full-width content */}
@@ -118,6 +128,8 @@ function App() {
           <Route element={<UnprotectedRoute />}>
             <Route path="/login" element={<AuthPage />} />
             <Route path="/register" element={<AuthPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           </Route>
 
           {/* Protected routes with sidebar layout */}

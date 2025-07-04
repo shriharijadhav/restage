@@ -19,6 +19,7 @@ export const AUTH = {
   LAST_NAME: 'Last Name',
   LAST_NAME_OPTIONAL: 'Last Name (optional)',
   ORGANIZATION_NAME: 'Organization Name',
+  ORGANIZATION_NAME_OPTIONAL: 'Organization Name (optional)',
   EMAIL: 'Email',
   PASSWORD: 'Password',
   CONFIRM_PASSWORD: 'Confirm Password',
@@ -34,6 +35,22 @@ export const AUTH = {
   LOGIN: 'Login',
   SIGN_UP: 'Sign Up',
   FORGOT_PASSWORD: 'Forgot Password?',
+  RESET_PASSWORD: 'Reset Password',
+  ENTER_EMAIL: 'Enter your email address',
+  SEND_RESET_LINK: 'Send Reset Link',
+  VERIFICATION_CODE: 'Verification Code',
+  ENTER_OTP: 'Enter the 6-digit code sent to your email',
+  VERIFY_OTP: 'Verify Code',
+  NEW_PASSWORD: 'New Password',
+  CONFIRM_NEW_PASSWORD: 'Confirm New Password',
+  RESET_PASSWORD_BUTTON: 'Reset Password',
+  BACK_TO_LOGIN: 'Back to Login',
+  UPDATE_PASSWORD: 'Update Password',
+  CURRENT_PASSWORD: 'Current Password',
+  NEW_PASSWORD: 'New Password',
+  CONFIRM_NEW_PASSWORD: 'Confirm New Password',
+  UPDATE_PASSWORD_BUTTON: 'Update Password',
+  CHANGE_PASSWORD: 'Change Password',
   DONT_HAVE_ACCOUNT: "Don't have an account? Sign Up",
   ALREADY_HAVE_ACCOUNT: 'Already have an account? Login',
   
@@ -43,9 +60,17 @@ export const AUTH = {
   PASSWORD_REQUIRED: 'Password is required.',
   PASSWORD_MIN_LENGTH: 'Password must be at least 6 characters.',
   FIRST_NAME_REQUIRED: 'First name is required.',
-  ORGANIZATION_REQUIRED: 'Organization name is required.',
+
   CONFIRM_PASSWORD_REQUIRED: 'Please confirm your password.',
   PASSWORDS_DONT_MATCH: 'Passwords do not match.',
+  EMAIL_SENT_SUCCESS: 'Password reset email sent successfully. Please check your email.',
+  OTP_VERIFIED_SUCCESS: 'Code verified successfully. Please enter your new password.',
+  PASSWORD_RESET_SUCCESS: 'Password reset successfully. You can now login with your new password.',
+  PASSWORD_UPDATE_SUCCESS: 'Password updated successfully',
+  CURRENT_PASSWORD_INCORRECT: 'Current password is incorrect',
+  NO_ACCOUNT_FOUND: 'No account found with this email address. Please sign up first.',
+  INVALID_OTP: 'Invalid or expired verification code.',
+  OTP_SENT: 'Verification code sent to your email.',
   UNEXPECTED_ERROR: 'An unexpected error occurred. Please try again.',
   
   // Accessibility
@@ -150,6 +175,7 @@ export const PROJECTS = {
   NEXT: 'Next',
   BACK: 'Back',
   REMOVE: 'Remove',
+  CANCEL: 'Cancel',
   
   // Validation
   PROJECT_NAME_REQUIRED: 'Project name is required',
@@ -273,7 +299,7 @@ export const SETTINGS = {
   PROFILE_SUBTITLE: 'Update your personal information and account details.',
   FULL_NAME: 'Full Name',
   EMAIL_ADDRESS: 'Email Address',
-  COMPANY: 'Company',
+  ORGANIZATION: 'Organization',
   ROLE: 'Role',
   
   // Preferences section
@@ -303,11 +329,12 @@ export const SETTINGS = {
   
   // Buttons
   SAVE_CHANGES: 'Save Changes',
+  EDIT_PROFILE: 'Edit Profile',
   
   // Default values
   DEFAULT_NAME: 'John Doe',
   DEFAULT_EMAIL: 'john.doe@example.com',
-  DEFAULT_COMPANY: 'Tech Corp',
+  DEFAULT_ORGANIZATION: 'Tech Corp',
   DEFAULT_ROLE: 'API Developer',
 };
 
@@ -394,6 +421,10 @@ export const ERRORS = {
   UNEXPECTED_ERROR: 'An unexpected error occurred',
   TRY_AGAIN: 'Please try again',
   CONTACT_SUPPORT: 'Please contact support if the problem persists',
+  
+  // Theme and preferences errors
+  THEME_UPDATE_FAILED: 'Failed to save theme preference',
+  PREFERENCES_UPDATE_FAILED: 'Failed to save preferences',
 };
 
 export const SUCCESS = {
@@ -406,6 +437,11 @@ export const SUCCESS = {
   LOGGED_IN_SUCCESSFULLY: 'Logged in successfully',
   LOGGED_OUT_SUCCESSFULLY: 'Logged out successfully',
   REGISTERED_SUCCESSFULLY: 'Registered successfully',
+  NO_CHANGES_TO_SAVE: 'No changes to save',
+  
+  // Theme and preferences
+  THEME_UPDATED: 'Theme updated successfully',
+  PREFERENCES_SAVED: 'Preferences saved successfully',
 };
 
 export const VALIDATION = {
@@ -421,7 +457,7 @@ export const VALIDATION = {
   
   // Field-specific validation
   FIRST_NAME_REQUIRED: 'First name is required',
-  ORGANIZATION_REQUIRED: 'Organization name is required',
+
   CONFIRM_PASSWORD_REQUIRED: 'Please confirm your password',
   PROJECT_NAME_REQUIRED: 'Project name is required',
   DESCRIPTION_REQUIRED: 'Description is required',
