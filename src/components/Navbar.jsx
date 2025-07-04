@@ -97,7 +97,7 @@ const Navbar = () => {
         to={isAuthenticated ? "/dashboard" : "/"} 
         className="text-xl font-bold text-blue-600 dark:text-blue-400 mr-6"
       >
-        APIMOCKER
+        Restage
       </Link>
       
       {/* Desktop Menu */}

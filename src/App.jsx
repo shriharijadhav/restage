@@ -81,10 +81,10 @@ function RootRoute() {
     <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-blue-200 py-12 px-4">
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 hover:scale-105">
         <h1 className="text-4xl font-bold text-center text-gray-900 mb-4">
-          Welcome to APIForge
+          Welcome to Restage
         </h1>
         <p className="text-center text-gray-600 mb-8 text-lg">
-          APIForge helps you design, mock, and manage your API projects with ease. 
+          Restage helps you mock, document, and test your APIs with ease. 
           Please log in or register to get started.
         </p>
         <div className="flex justify-center space-x-4">

@@ -107,7 +107,7 @@ const AuthPage = () => {
         className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105"
       >
         <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">
-          {isLogin ? 'Welcome Back' : 'Join APIForge'}
+          {isLogin ? 'Welcome Back' : 'Join Restage'}
         </h2>
         <p className="text-center text-gray-600 mb-8">
           {isLogin ? 'Sign in to your account' : 'Create your account to get started'}
