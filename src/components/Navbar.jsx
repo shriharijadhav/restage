@@ -6,6 +6,7 @@ import { MdLightMode, MdDarkMode } from 'react-icons/md';
 import { useSelector, useDispatch } from 'react-redux';
 import { setTheme } from '../features/preferencesSlice';
 import authService from '../utils/authService';
+import { NAVIGATION, ARIA_LABELS } from '../constants/strings';
 
 // Helper to trigger auth state change event
 function triggerAuthChanged() {
@@ -86,7 +87,7 @@ const Navbar = () => {
         <button
           className="md:hidden flex items-center justify-center mr-2 text-gray-700 dark:text-gray-200 focus:outline-none"
           onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
+          aria-label={ARIA_LABELS.OPEN_MENU}
         >
           <FiMenu size={26} />
         </button>
@@ -105,13 +106,13 @@ const Navbar = () => {
         {isAuthenticated ? (
           // Authenticated user menu
           <>
-            <Link to="/dashboard" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Dashboard</Link>
-            <Link to="/settings" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Settings</Link>
+            <Link to="/dashboard" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{NAVIGATION.DASHBOARD}</Link>
+            <Link to="/settings" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{NAVIGATION.SETTINGS}</Link>
             <span className="ml-auto flex items-center gap-2 text-gray-700 dark:text-gray-200 font-medium">
               <button
                 onClick={toggleTheme}
                 className="text-xl text-gray-700 dark:text-gray-200 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
-                aria-label="Toggle theme"
+                aria-label={ARIA_LABELS.TOGGLE_THEME}
               >
                 {effectiveTheme === 'dark' ? <MdLightMode /> : <MdDarkMode />}
               </button>
@@ -120,7 +121,7 @@ const Navbar = () => {
                 onClick={handleLogout}
                 className="ml-4 px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
               >
-                Logout
+                {NAVIGATION.LOGOUT}
               </button>
             </span>
           </>
@@ -131,7 +132,7 @@ const Navbar = () => {
               <button
                 onClick={toggleTheme}
                 className="text-xl text-gray-700 dark:text-gray-200 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
-                aria-label="Toggle theme"
+                aria-label={ARIA_LABELS.TOGGLE_THEME}
               >
                 {effectiveTheme === 'dark' ? <MdLightMode /> : <MdDarkMode />}
               </button>

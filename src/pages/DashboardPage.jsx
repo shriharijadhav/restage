@@ -5,14 +5,15 @@ import { addProject, deleteProject, editProject } from '../features/projectSlice
 import { FiPlus, FiFolder, FiCalendar, FiSearch, FiGrid, FiList } from 'react-icons/fi';
 import KebabMenu from '../components/common/KebabMenu';
 import ProjectMultiPageForm from '../components/common/ProjectMultiPageForm';
+import { DASHBOARD, VALIDATION, PLACEHOLDERS, ARIA_LABELS } from '../constants/strings';
 
 // Helper for GitHub-style project name validation
 function validateProjectName(name) {
-  if (!name) return 'Project name is required.';
+  if (!name) return VALIDATION.PROJECT_NAME_REQUIRED;
   if (name.length > 100) return 'Max 100 characters.';
-  if (!/^[a-z0-9-]+$/.test(name)) return 'Only lowercase letters, numbers, and hyphens allowed.';
-  if (/^-|-$/.test(name)) return 'Cannot start or end with a hyphen.';
-  if (/--/.test(name)) return 'No consecutive hyphens.';
+  if (!/^[a-z0-9-]+$/.test(name)) return VALIDATION.PROJECT_NAME_INVALID;
+  if (/^-|-$/.test(name)) return VALIDATION.PROJECT_NAME_HYPHEN_START;
+  if (/--/.test(name)) return VALIDATION.PROJECT_NAME_CONSECUTIVE_HYPHENS;
   return '';
 }
 
@@ -87,9 +88,9 @@ const DashboardPage = () => {
     const date = new Date(iso);
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays - 1} days ago`;
+    if (diffDays === 1) return DASHBOARD.TODAY;
+    if (diffDays === 2) return DASHBOARD.YESTERDAY;
+    if (diffDays <= 7) return `${diffDays - 1} ${DASHBOARD.DAYS_AGO}`;
     return formatDate(iso);
   };
 
@@ -150,9 +151,9 @@ const DashboardPage = () => {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">API Projects</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{DASHBOARD.API_PROJECTS}</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Manage your API documentation and mock endpoints
+              {DASHBOARD.MANAGE_SUBTITLE}
             </p>
           </div>
           <button
@@ -160,7 +161,7 @@ const DashboardPage = () => {
             onClick={openModal}
           >
             <FiPlus size={20} />
-            New Project
+            {DASHBOARD.NEW_PROJECT}
           </button>
         </div>
 
@@ -170,7 +171,7 @@ const DashboardPage = () => {
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search projects..."
+              placeholder={DASHBOARD.SEARCH_PLACEHOLDER}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -232,7 +233,7 @@ const DashboardPage = () => {
                   </div>
                   
                   <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2">
-                    {project.description || 'No description provided'}
+                    {project.description || DASHBOARD.NO_DESCRIPTION}
                   </p>
                   
                   <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
@@ -267,14 +268,14 @@ const DashboardPage = () => {
                           {project.name}
                         </h3>
                         <p className="text-gray-600 dark:text-gray-300 text-sm mt-1 truncate">
-                          {project.description || 'No description provided'}
+                          {project.description || DASHBOARD.NO_DESCRIPTION}
                         </p>
                       </div>
                     </div>
                     <KebabMenu
                       options={[
-                        { label: 'Edit', onClick: () => openEditModal(project) },
-                        { label: 'Delete', onClick: () => openDeleteConfirm(project) },
+                        { label: DASHBOARD.EDIT, onClick: () => openEditModal(project) },
+                        { label: DASHBOARD.DELETE, onClick: () => openDeleteConfirm(project) },
                       ]}
                     />
                   </div>
@@ -288,12 +289,12 @@ const DashboardPage = () => {
               <FiFolder size={32} className="text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              {searchTerm ? 'No projects found' : 'No projects yet'}
+              {searchTerm ? DASHBOARD.NO_PROJECTS_FOUND : DASHBOARD.NO_PROJECTS_YET}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               {searchTerm 
-                ? 'Try adjusting your search terms' 
-                : 'Create your first API project to get started'
+                ? DASHBOARD.ADJUST_SEARCH 
+                : DASHBOARD.CREATE_FIRST_PROJECT
               }
             </p>
             {!searchTerm && (
@@ -301,7 +302,7 @@ const DashboardPage = () => {
                 onClick={openModal}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
               >
-                Create Project
+                {DASHBOARD.NEW_PROJECT}
               </button>
             )}
           </div>
@@ -315,13 +316,13 @@ const DashboardPage = () => {
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold"
               onClick={closeModal}
-              aria-label="Close"
+              aria-label={ARIA_LABELS.CLOSE}
               disabled={isSubmitting}
             >
               &times;
             </button>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create New Project</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{DASHBOARD.NEW_PROJECT}</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-2">Set up a new API documentation project</p>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -349,26 +350,26 @@ const DashboardPage = () => {
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold"
               onClick={closeEditModal}
-              aria-label="Close"
+              aria-label={ARIA_LABELS.CLOSE}
               disabled={isEditSubmitting}
             >
               &times;
             </button>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Edit Project</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">Update project details</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{DASHBOARD.EDIT_PROJECT}</h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">{DASHBOARD.EDIT_PROJECT_SUBTITLE}</p>
             </div>
             <form onSubmit={handleEditProject} className="space-y-6">
               <div>
                 <label className="block text-gray-700 dark:text-gray-200 font-semibold mb-2">
-                  Project Name <span className="text-red-500">*</span>
+                  {DASHBOARD.PROJECT_NAME} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
                     editNameError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
-                  placeholder="e.g. my-mock-api"
+                  placeholder={PLACEHOLDERS.PROJECT_NAME}
                   value={editName}
                   onChange={e => { setEditName(e.target.value); setEditNameError(''); }}
                   disabled={isEditSubmitting}
@@ -379,11 +380,11 @@ const DashboardPage = () => {
               </div>
               <div>
                 <label className="block text-gray-700 dark:text-gray-200 font-semibold mb-2">
-                  Description
+                  {DASHBOARD.DESCRIPTION}
                 </label>
                 <textarea
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  placeholder="Optional project description"
+                  placeholder={PLACEHOLDERS.DESCRIPTION}
                   value={editDescription}
                   onChange={e => setEditDescription(e.target.value)}
                   disabled={isEditSubmitting}
@@ -397,7 +398,7 @@ const DashboardPage = () => {
                   className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   disabled={isEditSubmitting}
                 >
-                  Cancel
+                  {DASHBOARD.CANCEL}
                 </button>
                 <button
                   type="submit"
@@ -407,10 +408,10 @@ const DashboardPage = () => {
                   {isEditSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Saving...
+                      {DASHBOARD.SAVING}
                     </>
                   ) : (
-                    'Save Changes'
+                    DASHBOARD.SAVE_CHANGES
                   )}
                 </button>
               </div>
@@ -426,14 +427,14 @@ const DashboardPage = () => {
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold"
               onClick={closeDeleteConfirm}
-              aria-label="Close"
+              aria-label={ARIA_LABELS.CLOSE}
               disabled={isDeleteSubmitting}
             >
               &times;
             </button>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Delete Project</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">Are you sure you want to delete <span className="font-semibold">{deleteConfirm.project?.name}</span>? This action cannot be undone.</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{DASHBOARD.DELETE_PROJECT}</h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">{DASHBOARD.DELETE_CONFIRMATION} <span className="font-semibold">{deleteConfirm.project?.name}</span>? {DASHBOARD.DELETE_WARNING}</p>
             </div>
             <div className="flex gap-3">
               <button
@@ -442,7 +443,7 @@ const DashboardPage = () => {
                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 disabled={isDeleteSubmitting}
               >
-                Cancel
+                {DASHBOARD.CANCEL}
               </button>
               <button
                 type="button"
@@ -453,10 +454,10 @@ const DashboardPage = () => {
                 {isDeleteSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Deleting...
+                    {DASHBOARD.DELETING}
                   </>
                 ) : (
-                  'Delete'
+                  DASHBOARD.DELETE_PROJECT_BUTTON
                 )}
               </button>
             </div>

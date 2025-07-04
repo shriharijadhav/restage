@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PROJECTS, VALIDATION, PLACEHOLDERS } from '../../constants/strings';
 
 const defaultStats = {
   totalEndpoints: 0,
@@ -28,11 +29,11 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
 
   const steps = [
     {
-      label: 'Basic Info',
+      label: PROJECTS.BASIC_INFO,
       render: ({ formData, setFormData, errors }) => (
         <div className="space-y-4">
           <div>
-            <label className="block font-semibold mb-1">Project Name <span className="text-red-500">*</span></label>
+            <label className="block font-semibold mb-1">{PROJECTS.PROJECT_NAME} <span className="text-red-500">*</span></label>
             <input
               className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.name}
@@ -44,7 +45,7 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
             {errors.name && <div className="text-red-500 text-sm mt-1">{errors.name}</div>}
           </div>
           <div>
-            <label className="block font-semibold mb-1">Description <span className="text-red-500">*</span></label>
+            <label className="block font-semibold mb-1">{PROJECTS.DESCRIPTION} <span className="text-red-500">*</span></label>
             <textarea
               className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.description}
@@ -55,12 +56,12 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
             {errors.description && <div className="text-red-500 text-sm mt-1">{errors.description}</div>}
           </div>
           <div>
-            <label className="block font-semibold mb-1">Version</label>
+            <label className="block font-semibold mb-1">{PROJECTS.VERSION}</label>
             <input
               className="w-full px-4 py-3 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={formData.version}
               onChange={e => setFormData(f => ({ ...f, version: e.target.value }))}
-              placeholder="v1.0.0"
+              placeholder={PLACEHOLDERS.VERSION_PLACEHOLDER}
               disabled={isSubmitting}
             />
           </div>
@@ -68,42 +69,42 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
       ),
       validate: (formData) => {
         const e = {};
-        if (!formData.name) e.name = 'Project name is required';
-        if (!formData.description) e.description = 'Description is required';
+        if (!formData.name) e.name = VALIDATION.PROJECT_NAME_REQUIRED;
+        if (!formData.description) e.description = VALIDATION.DESCRIPTION_REQUIRED;
         return e;
       },
     },
     {
-      label: 'API Info',
+      label: PROJECTS.API_INFO,
       render: ({ formData, setFormData }) => (
         <div className="space-y-4">
           <div>
-            <label className="block font-semibold mb-1">Base URL</label>
+            <label className="block font-semibold mb-1">{PROJECTS.BASE_URL}</label>
             <input
               className="w-full px-4 py-3 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={formData.baseUrl}
               onChange={e => setFormData(f => ({ ...f, baseUrl: e.target.value }))}
-              placeholder="https://api.example.com"
+              placeholder={PLACEHOLDERS.BASE_URL_PLACEHOLDER}
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label className="block font-semibold mb-1">Documentation URL</label>
+            <label className="block font-semibold mb-1">{PROJECTS.DOCUMENTATION}</label>
             <input
               className="w-full px-4 py-3 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={formData.documentation}
               onChange={e => setFormData(f => ({ ...f, documentation: e.target.value }))}
-              placeholder="https://docs.example.com"
+              placeholder={PLACEHOLDERS.DOCUMENTATION_PLACEHOLDER}
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label className="block font-semibold mb-1">Repository URL</label>
+            <label className="block font-semibold mb-1">{PROJECTS.REPOSITORY}</label>
             <input
               className="w-full px-4 py-3 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={formData.repository}
               onChange={e => setFormData(f => ({ ...f, repository: e.target.value }))}
-              placeholder="https://github.com/example/repo"
+              placeholder={PLACEHOLDERS.REPOSITORY_PLACEHOLDER}
               disabled={isSubmitting}
             />
           </div>
@@ -111,7 +112,7 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
       ),
     },
     {
-      label: 'Contributors',
+      label: PROJECTS.CONTRIBUTORS,
       render: ({ formData, setFormData }) => (
         <div className="space-y-4">
           <div className="mb-2">
@@ -121,14 +122,14 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
                 className="flex-1 px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 value={contributor.name}
                 onChange={e => setContributor(c => ({ ...c, name: e.target.value }))}
-                placeholder="Name"
+                placeholder={PLACEHOLDERS.CONTRIBUTOR_NAME}
                 disabled={isSubmitting}
               />
               <input
                 className="flex-1 px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 value={contributor.role}
                 onChange={e => setContributor(c => ({ ...c, role: e.target.value }))}
-                placeholder="Role"
+                placeholder={PLACEHOLDERS.CONTRIBUTOR_ROLE}
                 disabled={isSubmitting}
               />
               <button type="button" onClick={() => {
@@ -142,7 +143,7 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
                 <div key={idx} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded px-3 py-2">
                   <span className="font-medium text-gray-900 dark:text-gray-100">{c.name}</span>
                   <span className="text-sm text-gray-500 dark:text-gray-300">{c.role}</span>
-                  <button type="button" onClick={() => setFormData(f => ({ ...f, contributors: f.contributors.filter((_, i) => i !== idx) }))} className="ml-auto text-red-500">Remove</button>
+                  <button type="button" onClick={() => setFormData(f => ({ ...f, contributors: f.contributors.filter((_, i) => i !== idx) }))} className="ml-auto text-red-500">{PROJECTS.REMOVE}</button>
                 </div>
               ))}
             </div>
@@ -155,17 +156,17 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
       render: ({ formData, setFormData }) => (
         <div className="space-y-4">
           <div>
-            <label className="block font-semibold mb-1">Tags (comma separated)</label>
+            <label className="block font-semibold mb-1">{PROJECTS.TAGS}</label>
             <input
               className="w-full px-4 py-3 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={formData.tags}
               onChange={e => setFormData(f => ({ ...f, tags: e.target.value }))}
-              placeholder="e.g. auth, user, api"
+              placeholder={PLACEHOLDERS.TAGS}
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label className="block font-semibold mb-1">Long Description</label>
+            <label className="block font-semibold mb-1">{PROJECTS.LONG_DESCRIPTION}</label>
             <textarea
               className="w-full px-4 py-3 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={formData.longDescription}
@@ -254,7 +255,7 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
           onClick={isFirstStep ? onCancel : handleBack}
           className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
-          {isFirstStep ? 'Cancel' : 'Back'}
+          {isFirstStep ? PROJECTS.CANCEL : PROJECTS.BACK}
         </button>
         {isLastStep ? (
           <button
@@ -262,7 +263,7 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             disabled={isSubmitting}
           >
-            {isSubmitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Create Project'}
+            {isSubmitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : PROJECTS.CREATE_PROJECT}
           </button>
         ) : (
           <button
@@ -271,7 +272,7 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             disabled={isSubmitting}
           >
-            Next
+            {PROJECTS.NEXT}
           </button>
         )}
       </div>
