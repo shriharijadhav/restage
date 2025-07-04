@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-bg: #f3f4f6; /* light: gray-100 */
+  --color-bg-nav: #fff; /* light: white */
+  --color-bg-card: #fff; /* light: white for card */
+  --color-text: #111827; /* light: gray-900 */
+}
+.dark {
+  --color-bg: #1E1F1E; /* dark: custom dark */
+  --color-bg-nav: #232423; /* dark: slightly lighter for nav */
+  --color-bg-card: #232423; /* dark: slightly lighter for card */
+  --color-text: #f3f4f6; /* dark: gray-100 */
+}
+
+/* Example usage: apply these variables in your custom classes or extend Tailwind config */
+
+/* Remove global .dark background override to allow Tailwind dark:bg-gray-900 to work as intended */
