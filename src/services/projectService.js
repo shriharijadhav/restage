@@ -1,4 +1,4 @@
-import { api } from '../utils/apiService';
+import apiService from '../utils/apiService';
 
 /**
  * Project Service - Handles all project-related API calls
@@ -6,121 +6,179 @@ import { api } from '../utils/apiService';
 class ProjectService {
   /**
    * Get all projects for the current user
+   * @returns {Promise<Object>} Response with projects array
    */
   async getProjects() {
     try {
-      const response = await api.get('/api/projects');
-      return { success: true, data: response.data };
+      const response = await apiService.get('/api/projects');
+      return {
+        success: true,
+        projects: response.data.projects
+      };
     } catch (error) {
-      console.error('Failed to fetch projects:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to fetch projects' };
+      console.error('Error fetching projects:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch projects'
+      };
     }
   }
 
   /**
-   * Get a specific project by ID
+   * Get a single project by ID
+   * @param {string} projectId - The project ID
+   * @returns {Promise<Object>} Response with project data
    */
   async getProject(projectId) {
     try {
-      const response = await api.get(`/api/projects/${projectId}`);
-      return { success: true, data: response.data };
+      const response = await apiService.get(`/api/projects/${projectId}`);
+      return {
+        success: true,
+        project: response.data.project
+      };
     } catch (error) {
-      console.error('Failed to fetch project:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to fetch project' };
+      console.error('Error fetching project:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch project'
+      };
     }
   }
 
   /**
    * Create a new project
+   * @param {Object} projectData - Project data
+   * @returns {Promise<Object>} Response with created project
    */
   async createProject(projectData) {
     try {
-      const response = await api.post('/api/projects', projectData);
-      return { success: true, data: response.data };
+      const response = await apiService.post('/api/projects', projectData);
+      return {
+        success: true,
+        project: response.data.project,
+        message: response.data.message
+      };
     } catch (error) {
-      console.error('Failed to create project:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to create project' };
+      console.error('Error creating project:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to create project'
+      };
     }
   }
 
   /**
    * Update an existing project
+   * @param {string} projectId - The project ID
+   * @param {Object} projectData - Updated project data
+   * @returns {Promise<Object>} Response with updated project
    */
   async updateProject(projectId, projectData) {
     try {
-      const response = await api.put(`/api/projects/${projectId}`, projectData);
-      return { success: true, data: response.data };
+      const response = await apiService.put(`/api/projects/${projectId}`, projectData);
+      return {
+        success: true,
+        project: response.data.project,
+        message: response.data.message
+      };
     } catch (error) {
-      console.error('Failed to update project:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to update project' };
+      console.error('Error updating project:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update project'
+      };
     }
   }
 
   /**
    * Delete a project
+   * @param {string} projectId - The project ID
+   * @returns {Promise<Object>} Response with success message
    */
   async deleteProject(projectId) {
     try {
-      const response = await api.delete(`/api/projects/${projectId}`);
-      return { success: true, data: response.data };
+      const response = await apiService.delete(`/api/projects/${projectId}`);
+      return {
+        success: true,
+        message: response.data.message
+      };
     } catch (error) {
-      console.error('Failed to delete project:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to delete project' };
+      console.error('Error deleting project:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete project'
+      };
     }
   }
 
   /**
-   * Get modules for a specific project
+   * Add an endpoint to a project
+   * @param {string} projectId - The project ID
+   * @param {Object} endpointData - Endpoint data
+   * @returns {Promise<Object>} Response with created endpoint
    */
-  async getProjectModules(projectId) {
+  async addEndpoint(projectId, endpointData) {
     try {
-      const response = await api.get(`/api/projects/${projectId}/modules`);
-      return { success: true, data: response.data };
+      const response = await apiService.post(`/api/projects/${projectId}/endpoints`, endpointData);
+      return {
+        success: true,
+        endpoint: response.data.endpoint,
+        message: response.data.message
+      };
     } catch (error) {
-      console.error('Failed to fetch project modules:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to fetch project modules' };
+      console.error('Error adding endpoint:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to add endpoint'
+      };
     }
   }
 
   /**
-   * Create a new module in a project
+   * Update an endpoint in a project
+   * @param {string} projectId - The project ID
+   * @param {string} endpointId - The endpoint ID
+   * @param {Object} endpointData - Updated endpoint data
+   * @returns {Promise<Object>} Response with updated endpoint
    */
-  async createModule(projectId, moduleData) {
+  async updateEndpoint(projectId, endpointId, endpointData) {
     try {
-      const response = await api.post(`/api/projects/${projectId}/modules`, moduleData);
-      return { success: true, data: response.data };
+      const response = await apiService.put(`/api/projects/${projectId}/endpoints/${endpointId}`, endpointData);
+      return {
+        success: true,
+        endpoint: response.data.endpoint,
+        message: response.data.message
+      };
     } catch (error) {
-      console.error('Failed to create module:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to create module' };
+      console.error('Error updating endpoint:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update endpoint'
+      };
     }
   }
 
   /**
-   * Get endpoints for a specific module
+   * Delete an endpoint from a project
+   * @param {string} projectId - The project ID
+   * @param {string} endpointId - The endpoint ID
+   * @returns {Promise<Object>} Response with success message
    */
-  async getModuleEndpoints(projectId, moduleId) {
+  async deleteEndpoint(projectId, endpointId) {
     try {
-      const response = await api.get(`/api/projects/${projectId}/modules/${moduleId}/endpoints`);
-      return { success: true, data: response.data };
+      const response = await apiService.delete(`/api/projects/${projectId}/endpoints/${endpointId}`);
+      return {
+        success: true,
+        message: response.data.message
+      };
     } catch (error) {
-      console.error('Failed to fetch module endpoints:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to fetch module endpoints' };
-    }
-  }
-
-  /**
-   * Create a new endpoint in a module
-   */
-  async createEndpoint(projectId, moduleId, endpointData) {
-    try {
-      const response = await api.post(`/api/projects/${projectId}/modules/${moduleId}/endpoints`, endpointData);
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('Failed to create endpoint:', error);
-      return { success: false, error: error.response?.data?.message || 'Failed to create endpoint' };
+      console.error('Error deleting endpoint:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete endpoint'
+      };
     }
   }
 }
 
-export const projectService = new ProjectService();
-export default projectService; 
+export default new ProjectService(); 

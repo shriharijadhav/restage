@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { addProject, deleteProject, editProject } from '../features/projectSlice';
+import { 
+  setProjects, 
+  addProject, 
+  updateProject, 
+  deleteProject, 
+  setLoading, 
+  setError 
+} from '../features/projectSlice';
 import { FiPlus, FiFolder, FiCalendar, FiSearch, FiGrid, FiList } from 'react-icons/fi';
 import KebabMenu from '../components/common/KebabMenu';
 import ProjectMultiPageForm from '../components/common/ProjectMultiPageForm';
+import projectService from '../services/projectService';
+import { useSnackbar } from '../contexts/SnackbarContext';
 import { DASHBOARD, VALIDATION, PLACEHOLDERS, ARIA_LABELS } from '../constants/strings';
 
 // Helper for GitHub-style project name validation
@@ -20,7 +29,11 @@ function validateProjectName(name) {
 const DashboardPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { showSuccess, showError } = useSnackbar();
   const projects = useSelector((state) => state.project.projects);
+  const loading = useSelector((state) => state.project.loading);
+  const error = useSelector((state) => state.project.error);
+  const { isAuthenticated } = useSelector((state) => state.user);
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
@@ -35,6 +48,25 @@ const DashboardPage = () => {
   const [editNameError, setEditNameError] = useState('');
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+
+  // Fetch projects on component mount only if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchProjects = async () => {
+        dispatch(setLoading(true));
+        const result = await projectService.getProjects();
+        if (result.success) {
+          dispatch(setProjects(result.projects));
+        } else {
+          dispatch(setError(result.error));
+          showError(result.error);
+        }
+        dispatch(setLoading(false));
+      };
+
+      fetchProjects();
+    }
+  }, [dispatch, showError, isAuthenticated]);
 
   // Handle modal open/close
   const openModal = () => {
@@ -51,7 +83,7 @@ const DashboardPage = () => {
   };
 
   // Handle form submit
-  const handleCreateProject = (e) => {
+  const handleCreateProject = async (e) => {
     e.preventDefault();
     const error = validateProjectName(projectName);
     if (error) {
@@ -59,21 +91,26 @@ const DashboardPage = () => {
       return;
     }
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      const newProject = {
-        id: `proj-${Date.now()}`,
+    
+    try {
+      const result = await projectService.createProject({
         name: projectName,
-        description,
-        createdAt: new Date().toISOString(),
-        endpointCount: 0,
-        lastModified: new Date().toISOString(),
-        // Add other fields as needed
-      };
-      dispatch(addProject(newProject));
+        description
+      });
+      
+      if (result.success) {
+        dispatch(addProject(result.project));
+        showSuccess(result.message);
+        closeModal();
+      } else {
+        setNameError(result.error);
+        showError(result.error);
+      }
+    } catch (err) {
+      showError('Failed to create project');
+    } finally {
       setIsSubmitting(false);
-      closeModal();
-    }, 800);
+    }
   };
 
   // Format date
@@ -113,7 +150,7 @@ const DashboardPage = () => {
     setEditDescription('');
     setEditNameError('');
   };
-  const handleEditProject = (e) => {
+  const handleEditProject = async (e) => {
     e.preventDefault();
     const error = validateProjectName(editName);
     if (error) {
@@ -121,28 +158,49 @@ const DashboardPage = () => {
       return;
     }
     setIsEditSubmitting(true);
-    setTimeout(() => {
-      dispatch(editProject({
-        id: editModal.project.id,
+    
+    try {
+      const result = await projectService.updateProject(editModal.project._id, {
         name: editName,
-        description: editDescription,
-        lastModified: new Date().toISOString(),
-      }));
+        description: editDescription
+      });
+      
+      if (result.success) {
+        dispatch(updateProject(result.project));
+        showSuccess(result.message);
+        closeEditModal();
+      } else {
+        setEditNameError(result.error);
+        showError(result.error);
+      }
+    } catch (err) {
+      showError('Failed to update project');
+    } finally {
       setIsEditSubmitting(false);
-      closeEditModal();
-    }, 800);
+    }
   };
 
   // Delete handlers
   const openDeleteConfirm = (project) => setDeleteConfirm({ open: true, project });
   const closeDeleteConfirm = () => setDeleteConfirm({ open: false, project: null });
-  const handleDeleteProject = () => {
+  const handleDeleteProject = async () => {
     setIsDeleteSubmitting(true);
-    setTimeout(() => {
-      dispatch(deleteProject(deleteConfirm.project.id));
+    
+    try {
+      const result = await projectService.deleteProject(deleteConfirm.project._id);
+      
+      if (result.success) {
+        dispatch(deleteProject(deleteConfirm.project._id));
+        showSuccess(result.message);
+        closeDeleteConfirm();
+      } else {
+        showError(result.error);
+      }
+    } catch (err) {
+      showError('Failed to delete project');
+    } finally {
       setIsDeleteSubmitting(false);
-      closeDeleteConfirm();
-    }, 800);
+    }
   };
 
   return (
@@ -204,14 +262,19 @@ const DashboardPage = () => {
 
       {/* Projects Section */}
       <div className="space-y-6">
-        {filteredProjects.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading projects...</p>
+          </div>
+        ) : filteredProjects.length > 0 ? (
           viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map((project) => (
                 <div
-                  key={project.id}
+                  key={project._id}
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 group"
-                  onClick={() => navigate(`/project/${project.id}`)}
+                  onClick={() => navigate(`/project/${project._id}`)}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -240,9 +303,9 @@ const DashboardPage = () => {
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-1">
                         <FiCalendar size={14} />
-                        {formatRelativeDate(project.lastModified)}
+                        {formatRelativeDate(project.updatedAt)}
                       </span>
-                      <span>{project.endpointCount} endpoints</span>
+                      <span>{project.endpoints?.length || 0} endpoints</span>
                     </div>
                   </div>
                 </div>
@@ -252,11 +315,11 @@ const DashboardPage = () => {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
               {filteredProjects.map((project, index) => (
                 <div
-                  key={project.id}
+                  key={project._id}
                   className={`p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                     index !== filteredProjects.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''
                   }`}
-                  onClick={() => navigate(`/project/${project.id}`)}
+                  onClick={() => navigate(`/project/${project._id}`)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -329,13 +392,22 @@ const DashboardPage = () => {
               <ProjectMultiPageForm
                 isSubmitting={isSubmitting}
                 onCancel={closeModal}
-                onSubmit={project => {
+                onSubmit={async (projectData) => {
                   setIsSubmitting(true);
-                  setTimeout(() => {
-                    dispatch(addProject(project));
+                  try {
+                    const result = await projectService.createProject(projectData);
+                    if (result.success) {
+                      dispatch(addProject(result.project));
+                      showSuccess(result.message);
+                      closeModal();
+                    } else {
+                      showError(result.error);
+                    }
+                  } catch (err) {
+                    showError('Failed to create project');
+                  } finally {
                     setIsSubmitting(false);
-                    closeModal();
-                  }, 800);
+                  }
                 }}
               />
             </div>

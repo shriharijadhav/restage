@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { PROJECTS, VALIDATION, PLACEHOLDERS } from '../../constants/strings';
 
 const defaultStats = {
@@ -22,10 +23,25 @@ const initialValues = {
 };
 
 const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
+  const user = useSelector((state) => state.user.user);
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState(initialValues);
   const [errors, setErrors] = useState({});
-  const [contributor, setContributor] = useState({ name: '', role: '' });
+  const [contributor, setContributor] = useState({ name: '', role: '', email: '' });
+
+  // Set default contributor (current user) when component mounts
+  useEffect(() => {
+    if (user && formData.contributors.length === 0) {
+      setFormData(prev => ({
+        ...prev,
+        contributors: [{
+          name: user.name,
+          role: user.role || 'Project Owner',
+          email: user.email
+        }]
+      }));
+    }
+  }, [user]);
 
   const steps = [
     {
@@ -132,18 +148,36 @@ const ProjectMultiPageForm = ({ onSubmit, onCancel, isSubmitting }) => {
                 placeholder={PLACEHOLDERS.CONTRIBUTOR_ROLE}
                 disabled={isSubmitting}
               />
+              <input
+                className="flex-1 px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                type="email"
+                value={contributor.email}
+                onChange={e => setContributor(c => ({ ...c, email: e.target.value }))}
+                placeholder="Email (optional)"
+                disabled={isSubmitting}
+              />
               <button type="button" onClick={() => {
-                if (!contributor.name && !contributor.role) return;
+                if (!contributor.name || !contributor.role) return;
                 setFormData(f => ({ ...f, contributors: [...(f.contributors || []), contributor] }));
-                setContributor({ name: '', role: '' });
+                setContributor({ name: '', role: '', email: '' });
               }} className="px-3 py-2 bg-blue-600 text-white rounded-lg" disabled={isSubmitting}>Add</button>
             </div>
             <div className="space-y-2">
               {formData.contributors.map((c, idx) => (
                 <div key={idx} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded px-3 py-2">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{c.name}</span>
-                  <span className="text-sm text-gray-500 dark:text-gray-300">{c.role}</span>
-                  <button type="button" onClick={() => setFormData(f => ({ ...f, contributors: f.contributors.filter((_, i) => i !== idx) }))} className="ml-auto text-red-500">{PROJECTS.REMOVE}</button>
+                  <div className="flex-1">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{c.name}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-300 ml-2">({c.role})</span>
+                    {c.email && <div className="text-xs text-gray-400">{c.email}</div>}
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setFormData(f => ({ ...f, contributors: f.contributors.filter((_, i) => i !== idx) }))} 
+                    className="text-red-500 hover:text-red-700"
+                    disabled={isSubmitting}
+                  >
+                    {PROJECTS.REMOVE}
+                  </button>
                 </div>
               ))}
             </div>

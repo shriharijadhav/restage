@@ -169,6 +169,7 @@ export const PROJECTS = {
   TAGS_PLACEHOLDER: 'e.g. auth, user, api',
   CONTRIBUTOR_NAME_PLACEHOLDER: 'Name',
   CONTRIBUTOR_ROLE_PLACEHOLDER: 'Role',
+  CONTRIBUTOR_EMAIL_PLACEHOLDER: 'Email (optional)',
   
   // Buttons
   CREATE_PROJECT: 'Create Project',

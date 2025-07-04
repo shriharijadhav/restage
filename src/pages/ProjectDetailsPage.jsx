@@ -3,7 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FiPlus, FiChevronDown, FiChevronRight, FiSettings, FiActivity, FiCode, FiX, FiTrash2, FiCopy, FiUsers, FiCalendar, FiFolder, FiGitBranch, FiStar, FiEye, FiDownload, FiSave, FiShare2 } from 'react-icons/fi';
 import MultiPageForm from '../components/common/MultiPageForm';
 import { useSelector, useDispatch } from 'react-redux';
-import { setCurrentProjectById, addEndpointToProjectModule } from '../features/projectSlice';
+import { setCurrentProject, addEndpoint, setLoading, setError } from '../features/projectSlice';
+import projectService from '../services/projectService';
+import { useSnackbar } from '../contexts/SnackbarContext';
 
 // Map project IDs to names for navigation
 const projectIdToName = {
@@ -29,10 +31,10 @@ const ProjectDetailsPage = () => {
   const { id: projectId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const modules = useSelector(state => state.project.modules);
+  const { showSuccess, showError } = useSnackbar();
   const currentProject = useSelector(state => state.project.currentProject);
+  const loading = useSelector(state => state.project.loading);
   const [activeTab, setActiveTab] = useState('endpoints');
-  const [expandedModules, setExpandedModules] = useState([]);
   const [showNewEndpointModal, setShowNewEndpointModal] = useState(false);
   const [newEndpoint, setNewEndpoint] = useState({
     method: 'GET',
@@ -66,15 +68,6 @@ const ProjectDetailsPage = () => {
     if (code >= 400 && code < 500) return 'text-yellow-600 dark:text-yellow-400';
     if (code >= 500) return 'text-red-600 dark:text-red-400';
     return 'text-gray-600 dark:text-gray-400';
-  };
-
-  // Toggle module expansion
-  const toggleModule = (moduleId) => {
-    setExpandedModules(prev =>
-      prev.includes(moduleId)
-        ? prev.filter(m => m !== moduleId)
-        : [...prev, moduleId]
-    );
   };
 
   // Format date
@@ -422,38 +415,32 @@ const ProjectDetailsPage = () => {
       rateLimit: '',
       doc: formData.description,
     };
-    dispatch(addEndpointToProjectModule({
+    dispatch(addEndpoint({
       projectId,
-      moduleName: formData.module,
       endpoint,
     }));
     setShowNewEndpointModal(false);
     console.log('Endpoint created:', endpoint);
   };
 
-  // Share module handler
-  const handleShareModule = (projectName, moduleName) => {
-    const url = `${window.location.origin}/project/${projectName}/module/${moduleName}`;
-    if (navigator.share) {
-      navigator.share({
-        title: `${moduleName} Module`,
-        text: `Check out the ${moduleName} module in ${projectName}`,
-        url,
-      });
-    } else {
-      navigator.clipboard.writeText(url);
-      alert('Module link copied!');
+  useEffect(() => {
+    const fetchProject = async () => {
+      dispatch(setLoading(true));
+      const result = await projectService.getProject(projectId);
+      if (result.success) {
+        dispatch(setCurrentProject(result.project));
+      } else {
+        dispatch(setError(result.error));
+        showError(result.error);
+        navigate('/dashboard');
+      }
+      dispatch(setLoading(false));
+    };
+
+    if (projectId) {
+      fetchProject();
     }
-  };
-
-  useEffect(() => {
-    dispatch(setCurrentProjectById(projectId));
-  }, [dispatch, projectId]);
-
-  useEffect(() => {
-    // Expand all modules by default when modules change
-    setExpandedModules(modules.map(m => m.id || m.name));
-  }, [modules]);
+  }, [dispatch, projectId, showError, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -522,79 +509,71 @@ const ProjectDetailsPage = () => {
               </div>
             </div>
 
-            {/* Module-wise Endpoints */}
+            {/* Endpoints List */}
             <div className="space-y-6">
-              {modules.map(module => (
-                <div key={module.id || module.name} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                  {/* Module Header */}
+              {currentProject?.endpoints && currentProject.endpoints.length > 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                  {/* Default Module Header */}
                   <div className="w-full flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <div className="flex items-center gap-3">
-                      <button type="button" onClick={() => toggleModule(module.id || module.name)} className="focus:outline-none">
-                        {expandedModules.includes(module.id || module.name) ? (
-                          <FiChevronDown size={20} className="text-gray-500" />
-                        ) : (
-                          <FiChevronRight size={20} className="text-gray-500" />
-                        )}
-                      </button>
-                      <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 capitalize">
-                        {module.name}
+                      <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100">
+                        API Endpoints
                       </h3>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {module.endpoints.length} endpoint{module.endpoints.length !== 1 ? 's' : ''}
+                        {currentProject.endpoints.length} endpoint{currentProject.endpoints.length !== 1 ? 's' : ''}
                       </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleShareModule(currentProject?.name || 'user-api', module.name)}
-                        className="flex items-center gap-1 px-3 py-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg text-sm"
-                      >
-                        <FiShare2 size={14} /> Share Module
-                      </button>
-                      <button
-                        onClick={() => navigate(`/project/${currentProject?.name || 'user-api'}/module/${module.name}`)}
-                        className="flex items-center gap-1 px-3 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm"
-                      >
-                        <FiChevronRight size={14} /> View Details
-                      </button>
                     </div>
                   </div>
 
                   {/* Endpoints List */}
-                  {expandedModules.includes(module.id || module.name) && (
-                    <div className="border-t border-gray-200 dark:border-gray-700">
-                      {module.endpoints.map((endpoint) => (
-                        <div
-                          key={endpoint.id}
-                          onClick={() => navigate(`/project/${currentProject?.name || 'user-api'}/${module.name}/${endpoint.id}`)}
-                          className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                        >
-                          <div className="flex items-center gap-4">
-                            <span className={`px-3 py-1 rounded text-sm font-medium ${getMethodColor(endpoint.method)}`}>
-                              {endpoint.method}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                                {endpoint.path}
-                              </div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {endpoint.description}
-                              </div>
+                  <div className="border-t border-gray-200 dark:border-gray-700">
+                    {currentProject.endpoints.map((endpoint) => (
+                      <div
+                        key={endpoint._id}
+                        onClick={() => navigate(`/project/${currentProject._id}/endpoint/${endpoint._id}`)}
+                        className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className={`px-3 py-1 rounded text-sm font-medium ${getMethodColor(endpoint.method)}`}>
+                            {endpoint.method}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                              {endpoint.path}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              {endpoint.summary}
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className={`text-sm font-medium ${getStatusCodeColor(endpoint.statusCode)}`}>
-                              {endpoint.statusCode}
-                            </span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {formatDate(endpoint.lastModified)}
-                            </span>
-                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(endpoint.updatedAt)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              ) : (
+                <div className="text-center py-16">
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                    <FiCode size={32} className="text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    No endpoints yet
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Create your first endpoint to get started
+                  </p>
+                  <button
+                    onClick={() => setShowNewEndpointModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Create Endpoint
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -619,7 +598,7 @@ const ProjectDetailsPage = () => {
                     <FiCode size={20} className="text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{modules.reduce((total, module) => total + module.endpoints.length, 0)}</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentProject?.endpoints?.length || 0}</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Endpoints</div>
                   </div>
                 </div>
@@ -631,7 +610,7 @@ const ProjectDetailsPage = () => {
                     <FiFolder size={20} className="text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{modules.length}</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">1</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Modules</div>
                   </div>
                 </div>
@@ -643,7 +622,7 @@ const ProjectDetailsPage = () => {
                     <FiEye size={20} className="text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentProject?.stats.totalRequests.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">0</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Requests</div>
                   </div>
                 </div>
@@ -655,7 +634,7 @@ const ProjectDetailsPage = () => {
                     <FiActivity size={20} className="text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentProject?.stats.averageResponseTime}ms</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">0ms</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Avg Response Time</div>
                   </div>
                 </div>
@@ -671,19 +650,23 @@ const ProjectDetailsPage = () => {
                   Contributors
                 </h3>
                 <div className="space-y-3">
-                  {currentProject?.contributors.map((contributor, index) => (
+                  {currentProject?.contributors?.map((contributor, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <img 
-                        src={contributor.avatar} 
-                        alt={contributor.name}
-                        className="w-10 h-10 rounded-full"
-                      />
+                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                        <span className="text-blue-600 dark:text-blue-400 font-medium">
+                          {contributor.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
                       <div>
                         <div className="font-medium text-gray-900 dark:text-gray-100">{contributor.name}</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">{contributor.role}</div>
                       </div>
                     </div>
-                  ))}
+                  )) || (
+                    <div className="text-gray-500 dark:text-gray-400 text-center py-4">
+                      No contributors added yet
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -703,11 +686,11 @@ const ProjectDetailsPage = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">Last Modified</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(currentProject?.lastModified)}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(currentProject?.updatedAt)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">Uptime</span>
-                    <span className="font-medium text-green-600 dark:text-green-400">{currentProject?.stats.uptime}%</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">100%</span>
                   </div>
                 </div>
               </div>
@@ -717,14 +700,16 @@ const ProjectDetailsPage = () => {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Tags</h3>
               <div className="flex flex-wrap gap-2">
-                {currentProject?.tags.map((tag, index) => (
+                {currentProject?.tags?.map((tag, index) => (
                   <span 
                     key={index}
                     className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium"
                   >
                     {tag}
                   </span>
-                ))}
+                )) || (
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">No tags added</span>
+                )}
               </div>
             </div>
 
