@@ -24,7 +24,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.example.c
 const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
 // Generate cURL command for any language
-const generateCurlCommand = (endpoint, playgroundData) => {
+const generateCurlCommand = (endpoint, playgroundData, baseUrl) => {
   const headers = playgroundData.headers
     .filter(h => h.key && h.value)
     .map(h => `-H "${h.key}: ${h.value}"`)
@@ -36,8 +36,8 @@ const generateCurlCommand = (endpoint, playgroundData) => {
     .join('&');
   
   const url = queryParams 
-    ? `${API_BASE_URL}${endpoint.path}?${queryParams}`
-    : `${API_BASE_URL}${endpoint.path}`;
+    ? `${baseUrl}${endpoint.path}?${queryParams}`
+    : `${baseUrl}${endpoint.path}`;
   
   let curl = `curl -X ${endpoint.method} "${url}"`;
   
@@ -58,7 +58,7 @@ const BACKEND_LANGUAGES = {
     name: 'Node.js',
     icon: '⚡',
     description: 'JavaScript/TypeScript',
-    codeGenerator: (endpoint, playgroundData) => {
+    codeGenerator: (endpoint, playgroundData, baseUrl) => {
       const headers = playgroundData.headers
         .filter(h => h.key && h.value)
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {});
@@ -70,8 +70,8 @@ const BACKEND_LANGUAGES = {
       let code = `const axios = require('axios');\n\n`;
       
       const url = queryParams 
-        ? `${API_BASE_URL}${endpoint.path}?${Object.keys(queryParams).map(k => `${k}=${queryParams[k]}`).join('&')}`
-        : `${API_BASE_URL}${endpoint.path}`;
+        ? `${baseUrl}${endpoint.path}?${Object.keys(queryParams).map(k => `${k}=${queryParams[k]}`).join('&')}`
+        : `${baseUrl}${endpoint.path}`;
       
       code += `const url = "${url}";\n`;
       
@@ -105,7 +105,7 @@ const BACKEND_LANGUAGES = {
     name: 'Python',
     icon: '🐍',
     description: 'Python requests',
-    codeGenerator: (endpoint, playgroundData) => {
+    codeGenerator: (endpoint, playgroundData, baseUrl) => {
       const headers = playgroundData.headers
         .filter(h => h.key && h.value)
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {});
@@ -115,7 +115,7 @@ const BACKEND_LANGUAGES = {
         .reduce((acc, p) => ({ ...acc, [p.key]: p.value }), {});
       
       let code = `import requests\n\n`;
-      code += `url = "${API_BASE_URL}${endpoint.path}"\n`;
+      code += `url = "${baseUrl}${endpoint.path}"\n`;
       
       if (Object.keys(queryParams).length > 0) {
         code += `params = ${prettyJSON(queryParams)}\n`;
@@ -155,7 +155,7 @@ const BACKEND_LANGUAGES = {
     name: 'Ruby',
     icon: '💎',
     description: 'Ruby Net::HTTP',
-    codeGenerator: (endpoint, playgroundData) => {
+    codeGenerator: (endpoint, playgroundData, baseUrl) => {
       const headers = playgroundData.headers
         .filter(h => h.key && h.value)
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {});
@@ -168,8 +168,8 @@ const BACKEND_LANGUAGES = {
       let code = `require 'net/http'\nrequire 'json'\nrequire 'uri'\n\n`;
       
       const url = queryParams 
-        ? `${API_BASE_URL}${endpoint.path}?${queryParams}`
-        : `${API_BASE_URL}${endpoint.path}`;
+        ? `${baseUrl}${endpoint.path}?${queryParams}`
+        : `${baseUrl}${endpoint.path}`;
       
       code += `uri = URI("${url}")\n`;
       code += `http = Net::HTTP.new(uri.host, uri.port)\n`;
@@ -202,7 +202,7 @@ const BACKEND_LANGUAGES = {
   }
 };
 
-const Playground = ({ endpoint }) => {
+const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
   const [selectedLanguage, setSelectedLanguage] = useState('nodejs');
   const [playgroundData, setPlaygroundData] = useState({
     headers: [],
@@ -214,7 +214,7 @@ const Playground = ({ endpoint }) => {
   const [copied, setCopied] = useState(false);
 
   // Generate cURL for selected language
-  const generatedCurl = BACKEND_LANGUAGES[selectedLanguage]?.curlGenerator(endpoint, playgroundData) || '';
+  const generatedCurl = BACKEND_LANGUAGES[selectedLanguage]?.curlGenerator(endpoint, playgroundData, baseUrl) || '';
 
   // Copy functions with feedback
   const handleCopy = async (text) => {

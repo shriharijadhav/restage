@@ -26,6 +26,29 @@ function validateProjectName(name) {
   return '';
 }
 
+// Helper to calculate total endpoints from modules
+const calculateTotalEndpoints = (project) => {
+  // Use server-provided total if available
+  if (project.totalEndpoints !== undefined) {
+    return project.totalEndpoints;
+  }
+  // Fallback to local calculation
+  if (!project.modules || !Array.isArray(project.modules)) return 0;
+  return project.modules.reduce((total, module) => {
+    return total + (module.endpoints?.length || 0);
+  }, 0);
+};
+
+// Helper to calculate total modules
+const calculateTotalModules = (project) => {
+  // Use server-provided total if available
+  if (project.totalModules !== undefined) {
+    return project.totalModules;
+  }
+  // Fallback to local calculation
+  return project.modules?.length || 0;
+};
+
 const DashboardPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -305,7 +328,8 @@ const DashboardPage = () => {
                         <FiCalendar size={14} />
                         {formatRelativeDate(project.updatedAt)}
                       </span>
-                      <span>{project.endpoints?.length || 0} endpoints</span>
+                      <span>{calculateTotalModules(project)} modules</span>
+                      <span>{calculateTotalEndpoints(project)} endpoints</span>
                     </div>
                   </div>
                 </div>
@@ -333,6 +357,14 @@ const DashboardPage = () => {
                         <p className="text-gray-600 dark:text-gray-300 text-sm mt-1 truncate">
                           {project.description || DASHBOARD.NO_DESCRIPTION}
                         </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          <span className="flex items-center gap-1">
+                            <FiCalendar size={14} />
+                            {formatRelativeDate(project.updatedAt)}
+                          </span>
+                          <span>{calculateTotalModules(project)} modules</span>
+                          <span>{calculateTotalEndpoints(project)} endpoints</span>
+                        </div>
                       </div>
                     </div>
                     <KebabMenu

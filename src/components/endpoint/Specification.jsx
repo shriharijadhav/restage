@@ -30,7 +30,7 @@ const EXAMPLE_LANGUAGES = {
     name: 'Node.js',
     icon: '⚡',
     description: 'JavaScript/TypeScript',
-    codeGenerator: (endpoint) => {
+    codeGenerator: (endpoint, baseUrl) => {
       const headers = endpoint.headers
         ?.filter(h => h.key && h.value)
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}) || {};
@@ -47,7 +47,7 @@ const EXAMPLE_LANGUAGES = {
       }
       
       code += `const response = await axios.${endpoint.method.toLowerCase()}(`;
-      code += `'${API_BASE_URL}${endpoint.path}'`;
+      code += `'${baseUrl}${endpoint.path}'`;
       
       if (Object.keys(headers).length > 0) {
         code += `, { headers }`;
@@ -67,7 +67,7 @@ const EXAMPLE_LANGUAGES = {
     name: 'Python',
     icon: '🐍',
     description: 'Python requests',
-    codeGenerator: (endpoint) => {
+    codeGenerator: (endpoint, baseUrl) => {
       const headers = endpoint.headers
         ?.filter(h => h.key && h.value)
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}) || {};
@@ -84,7 +84,7 @@ const EXAMPLE_LANGUAGES = {
       }
       
       code += `response = requests.${endpoint.method.toLowerCase()}(`;
-      code += `'${API_BASE_URL}${endpoint.path}'`;
+      code += `'${baseUrl}${endpoint.path}'`;
       
       if (Object.keys(headers).length > 0) {
         code += `, headers=headers`;
@@ -104,14 +104,14 @@ const EXAMPLE_LANGUAGES = {
     name: 'Ruby',
     icon: '💎',
     description: 'Ruby Net::HTTP',
-    codeGenerator: (endpoint) => {
+    codeGenerator: (endpoint, baseUrl) => {
       const headers = endpoint.headers
         ?.filter(h => h.key && h.value)
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}) || {};
       
       let code = `require 'net/http'\nrequire 'json'\nrequire 'uri'\n\n`;
       
-      code += `uri = URI('${API_BASE_URL}${endpoint.path}')\n`;
+      code += `uri = URI('${baseUrl}${endpoint.path}')\n`;
       code += `http = Net::HTTP.new(uri.host, uri.port)\n`;
       code += `http.use_ssl = true if uri.scheme == 'https'\n\n`;
       
@@ -142,9 +142,15 @@ const EXAMPLE_LANGUAGES = {
   }
 };
 
-const Specification = ({ endpoint }) => {
+const Specification = ({ endpoint, baseUrl = API_BASE_URL }) => {
   const [copied, setCopied] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('nodejs');
+
+  // Define requestData at component level
+  const requestData = endpoint?.requestBody?.schema || endpoint?.requestBody;
+
+  // Debug: Check what baseUrl is being used
+  console.log('Specification baseUrl:', baseUrl, 'API_BASE_URL:', API_BASE_URL);
 
   const handleCopy = async (text) => {
     const success = await copyToClipboard(text);
@@ -155,7 +161,7 @@ const Specification = ({ endpoint }) => {
   };
 
   // Generate example code for selected language
-  const generatedExample = EXAMPLE_LANGUAGES[selectedLanguage]?.codeGenerator(endpoint) || '';
+  const generatedExample = EXAMPLE_LANGUAGES[selectedLanguage]?.codeGenerator(endpoint, baseUrl) || '';
 
   if (!endpoint) {
     return (
@@ -178,7 +184,7 @@ const Specification = ({ endpoint }) => {
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Endpoint</h3>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
               <code className="text-sm text-gray-800 dark:text-gray-200">
-                {endpoint.method} {API_BASE_URL}{endpoint.path}
+                {endpoint.method} {baseUrl}{endpoint.path}
               </code>
             </div>
           </div>
@@ -330,8 +336,7 @@ const Specification = ({ endpoint }) => {
               <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">cURL</h3>
               <button
                 onClick={() => {
-                  const requestData = endpoint.requestBody?.schema || endpoint.requestBody;
-                  const curlCommand = `curl -X ${endpoint.method} "${API_BASE_URL}${endpoint.path}"${endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}${requestData ? ` -d '${prettyJSON(requestData)}'` : ''}`;
+                  const curlCommand = `curl -X ${endpoint.method} "${baseUrl}${endpoint.path}"${endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}${requestData ? ` -d '${prettyJSON(requestData)}'` : ''}`;
                   handleCopy(curlCommand);
                 }}
                 className="flex items-center gap-1 px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
@@ -343,52 +348,9 @@ const Specification = ({ endpoint }) => {
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
               <pre className="text-xs text-gray-800 dark:text-gray-200 overflow-x-auto">
                 <code>
-                  curl -X {endpoint.method} "{API_BASE_URL}{endpoint.path}"{endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}{(endpoint.requestBody?.schema || endpoint.requestBody) ? ` -d '${prettyJSON(endpoint.requestBody?.schema || endpoint.requestBody)}'` : ''}
+                  curl -X {endpoint.method} "{baseUrl}{endpoint.path}"{endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}{requestData ? ` -d '${prettyJSON(requestData)}'` : ''}
                 </code>
               </pre>
-            </div>
-          </div>
-        </div>
-
-        {/* Metadata */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Metadata</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Version Information</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">API Version</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{endpoint.version}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Created</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(endpoint.createdAt)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Last Modified</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(endpoint.lastModified)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Usage Statistics</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Total Calls</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{endpoint.callCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Average Response Time</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{endpoint.responseTime}ms</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Rate Limit</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{endpoint.rateLimit}</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -397,4 +359,4 @@ const Specification = ({ endpoint }) => {
   );
 };
 
-export default Specification; 
+export default Specification;

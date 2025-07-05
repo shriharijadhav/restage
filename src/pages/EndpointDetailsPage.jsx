@@ -33,6 +33,22 @@ import {
 // Environment configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.example.com';
 
+// Helper function to get base URL with fallback
+const getBaseUrl = (project) => {
+  if (project?.baseUrl) {
+    // Remove trailing slash if present, then add it back to ensure consistency
+    const cleanBaseUrl = project.baseUrl.replace(/\/$/, '');
+    const result = `${cleanBaseUrl}`;
+    console.log('getBaseUrl debug:', { 
+      original: project.baseUrl, 
+      clean: cleanBaseUrl, 
+      result 
+    });
+    return result;
+  }
+  return 'YOUR_PROJECTS_BASE_URL';
+};
+
 const EndpointDetailsPage = () => {
   const { projectId, moduleId, endpointId } = useParams();
   const navigate = useNavigate();
@@ -63,6 +79,9 @@ const EndpointDetailsPage = () => {
           return;
         }
         setProject(projectResult.project);
+        
+        // Debug: Check project data
+        console.log('Project loaded:', projectResult.project?.baseUrl);
 
         // Fetch module
         const moduleResult = await moduleService.getModule(projectId, moduleId);
@@ -103,7 +122,7 @@ const EndpointDetailsPage = () => {
   };
 
   const copyEndpointUrl = () => {
-    const url = `${API_BASE_URL}${endpoint?.path || '/api/endpoint'}`;
+    const url = `${getBaseUrl(project)}${endpoint?.path || '/api/endpoint'}`;
     handleCopy(url);
   };
 
@@ -238,11 +257,15 @@ const EndpointDetailsPage = () => {
 
       {/* Tab Content */}
       {activeTab === 'specification' && (
-        <Specification endpoint={endpoint} />
+        (() => {
+          const baseUrl = getBaseUrl(project);
+          console.log('Rendering Specification with:', { project, baseUrl });
+          return <Specification endpoint={endpoint} baseUrl={baseUrl} />;
+        })()
       )}
 
       {activeTab === 'playground' && (
-        <Playground endpoint={endpoint} />
+        <Playground endpoint={endpoint} baseUrl={getBaseUrl(project)} />
       )}
     </div>
   );
