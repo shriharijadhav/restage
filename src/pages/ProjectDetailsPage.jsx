@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiPlus, FiChevronDown, FiChevronRight, FiSettings, FiActivity, FiCode, FiX, FiTrash2, FiCopy, FiUsers, FiCalendar, FiFolder, FiGitBranch, FiStar, FiEye, FiDownload, FiSave, FiShare2 } from 'react-icons/fi';
+import { FiPlus, FiChevronDown, FiChevronRight, FiSettings, FiActivity, FiCode, FiX, FiTrash2, FiCopy, FiUsers, FiCalendar, FiFolder, FiGitBranch, FiStar, FiEye, FiDownload, FiSave, FiShare2, FiMoreVertical } from 'react-icons/fi';
+import { Accordion, AccordionSummary, AccordionDetails, IconButton, Menu, MenuItem } from '@mui/material';
+import { ExpandMore, MoreVert } from '@mui/icons-material';
 import MultiPageForm from '../components/common/MultiPageForm';
+import Breadcrumb from '../components/endpoint/Breadcrumb';
 import { useSelector, useDispatch } from 'react-redux';
-import { setCurrentProject, addEndpoint, setLoading, setError } from '../features/projectSlice';
+import { setCurrentProject, setLoading, setError } from '../features/projectSlice';
 import projectService from '../services/projectService';
+import moduleService from '../services/moduleService';
 import { useSnackbar } from '../contexts/SnackbarContext';
 
 // Map project IDs to names for navigation
@@ -15,7 +19,6 @@ const projectIdToName = {
 };
 
 const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
-const defaultModules = ['auth', 'users', 'products'];
 
 const getLoggedInUserName = () => {
   try {
@@ -28,7 +31,7 @@ const getLoggedInUserName = () => {
 };
 
 const ProjectDetailsPage = () => {
-  const { id: projectId } = useParams();
+  const { projectId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showSuccess, showError } = useSnackbar();
@@ -36,11 +39,13 @@ const ProjectDetailsPage = () => {
   const loading = useSelector(state => state.project.loading);
   const [activeTab, setActiveTab] = useState('endpoints');
   const [showNewEndpointModal, setShowNewEndpointModal] = useState(false);
+  const [moduleMenuAnchor, setModuleMenuAnchor] = useState(null);
+  const [selectedModule, setSelectedModule] = useState(null);
   const [newEndpoint, setNewEndpoint] = useState({
     method: 'GET',
     path: '',
     description: '',
-    module: 'auth',
+    module: '',
     statusCode: 200,
     version: 'v1.0',
     headers: [],
@@ -83,6 +88,33 @@ const ProjectDetailsPage = () => {
   const copyProjectId = () => {
     navigator.clipboard.writeText(projectId);
     // You could add a toast notification here
+  };
+
+  // Module menu handlers
+  const handleModuleMenuOpen = (event, module) => {
+    setModuleMenuAnchor(event.currentTarget);
+    setSelectedModule(module);
+  };
+
+  const handleModuleMenuClose = () => {
+    setModuleMenuAnchor(null);
+    setSelectedModule(null);
+  };
+
+  const handleViewModuleDetails = () => {
+    if (selectedModule) {
+      navigate(`/project/${currentProject._id}/module/${selectedModule._id}`);
+    }
+    handleModuleMenuClose();
+  };
+
+  const handleShareModule = () => {
+    if (selectedModule) {
+      const shareUrl = `${window.location.origin}/project/${currentProject._id}/module/${selectedModule._id}`;
+      navigator.clipboard.writeText(shareUrl);
+      showSuccess('Module link copied to clipboard!');
+    }
+    handleModuleMenuClose();
   };
 
   // MultiPageForm steps
@@ -130,15 +162,15 @@ const ProjectDetailsPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Module</label>
-              <select
+              <input
+                type="text"
                 value={formData.module}
                 onChange={e => setFormData(f => ({ ...f, module: e.target.value }))}
+                placeholder="Enter module name (e.g., auth, users, products)"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              >
-                {defaultModules.map(module => (
-                  <option key={module} value={module}>{module}</option>
-                ))}
-              </select>
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty to use 'api' as default</p>
+              {errors.module && <p className="text-red-500 text-xs mt-1">{errors.module}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status Code</label>
@@ -383,67 +415,143 @@ const ProjectDetailsPage = () => {
   ];
 
   // Handle new endpoint submission from MultiPageForm
-  const handleCreateEndpoint = (formData) => {
-    let requestBody = null;
-    let responseBody = null;
+  const handleCreateEndpoint = async (formData) => {
+    console.log('Starting endpoint creation with projectId:', projectId);
+    console.log('Form data:', formData);
+    
     try {
-      requestBody = formData.requestBody ? JSON.parse(formData.requestBody) : null;
-    } catch {}
-    try {
-      responseBody = formData.responseBody ? JSON.parse(formData.responseBody) : null;
-    } catch {}
+      // Prepare endpoint data
+      let requestBodySchema = null;
+      let responseSchema = null;
+      
+      try {
+        if (formData.requestBody) {
+          requestBodySchema = JSON.parse(formData.requestBody);
+        }
+      } catch (error) {
+        showError('Invalid JSON in request body');
+        return;
+      }
+      
+      try {
+        if (formData.responseBody) {
+          responseSchema = JSON.parse(formData.responseBody);
+        }
+      } catch (error) {
+        showError('Invalid JSON in response body');
+        return;
+      }
 
-    const endpoint = {
-      id: `${formData.module}-${Date.now()}`,
-      method: formData.method,
-      path: formData.path.startsWith('/') ? formData.path : `/${formData.path}`,
-      statusCode: formData.statusCode,
-      lastModified: new Date().toISOString(),
-      module: formData.module,
-      description: formData.description,
-      version: formData.version,
-      deprecated: false,
-      responseBody,
-      responseTime: Math.floor(Math.random() * 200) + 50,
-      createdBy: getLoggedInUserName() || 'Current User',
-      createdAt: new Date().toISOString(),
-      headers: formData.headers || [],
-      queryParams: formData.queryParams || [],
-      requestBody,
-      errors: formData.errors || [],
-      callCount: 0,
-      rateLimit: '',
-      doc: formData.description,
-    };
-    dispatch(addEndpoint({
-      projectId,
-      endpoint,
-    }));
+      const endpointData = {
+        moduleName: formData.module?.trim() || 'api',
+        path: formData.path.startsWith('/') ? formData.path : `/${formData.path}`,
+        method: formData.method,
+        summary: formData.description || 'API endpoint',
+        description: formData.description,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
+        parameters: formData.queryParams?.map(param => ({
+          name: param.key,
+          type: 'string',
+          required: false,
+          description: param.value
+        })) || [],
+        ...(formData.requestBody && {
+          requestBody: {
+            type: 'application/json',
+            schema: requestBodySchema
+          }
+        }),
+        responses: [{
+          code: parseInt(formData.statusCode) || 200,
+          description: 'Success response',
+          schema: responseSchema
+        }]
+      };
+
+      console.log('Creating endpoint with data:', endpointData);
+
+      // Create endpoint with automatic module handling
+      const result = await moduleService.createEndpoint(projectId, endpointData);
+      console.log('Endpoint creation result:', result);
+      
+      if (result.success) {
+        showSuccess('Endpoint created successfully');
+        // Refresh project data to get updated modules
+        const projectResult = await projectService.getProject(projectId);
+        if (projectResult.success) {
+          // Fetch updated modules
+          const modulesResult = await moduleService.getModules(projectId);
+          if (modulesResult.success) {
+            const projectWithModules = {
+              ...projectResult.project,
+              modules: modulesResult.modules
+            };
+            dispatch(setCurrentProject(projectWithModules));
+          }
+        }
+      } else {
+        showError(result.error);
+      }
+    } catch (error) {
+      console.error('Error creating endpoint:', error);
+      showError('Failed to create endpoint: ' + error.message);
+    }
+    
     setShowNewEndpointModal(false);
-    console.log('Endpoint created:', endpoint);
   };
 
   useEffect(() => {
-    const fetchProject = async () => {
+    const fetchProjectAndModules = async () => {
       dispatch(setLoading(true));
-      const result = await projectService.getProject(projectId);
-      if (result.success) {
-        dispatch(setCurrentProject(result.project));
-      } else {
-        dispatch(setError(result.error));
-        showError(result.error);
+      try {
+        // Fetch project
+        const projectResult = await projectService.getProject(projectId);
+        if (!projectResult.success) {
+          dispatch(setError(projectResult.error));
+          showError(projectResult.error);
+          navigate('/dashboard');
+          return;
+        }
+
+        // Fetch modules for this project
+        const modulesResult = await moduleService.getModules(projectId);
+        if (modulesResult.success) {
+          // Combine project data with modules
+          const projectWithModules = {
+            ...projectResult.project,
+            modules: modulesResult.modules
+          };
+          dispatch(setCurrentProject(projectWithModules));
+        } else {
+          // If modules fetch fails, still show project but with empty modules
+          dispatch(setCurrentProject({
+            ...projectResult.project,
+            modules: []
+          }));
+        }
+      } catch (error) {
+        dispatch(setError('Failed to fetch project data'));
+        showError('Failed to fetch project data');
         navigate('/dashboard');
       }
       dispatch(setLoading(false));
     };
 
     if (projectId) {
-      fetchProject();
+      fetchProjectAndModules();
     }
   }, [dispatch, projectId, showError, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-app">
+      {/* Breadcrumb */}
+      <div className="px-6 py-4">
+        <Breadcrumb 
+          projectId={projectId}
+          projectName={currentProject?.name}
+        />
+      </div>
+      
       {/* Project Overview Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6 mb-8 rounded-xl shadow-sm">
         <div className="flex items-center justify-between">
@@ -470,7 +578,7 @@ const ProjectDetailsPage = () => {
       <div className="mb-8">
         <nav className="flex space-x-8 border-b border-gray-200 dark:border-gray-700">
           {[
-            { id: 'endpoints', label: 'API Endpoints', icon: <FiCode size={18} /> },
+            { id: 'endpoints', label: 'Modules & Endpoints', icon: <FiCode size={18} /> },
             { id: 'overview', label: 'Overview', icon: <FiFolder size={18} /> },
           ].map((tab) => (
             <button
@@ -496,7 +604,7 @@ const ProjectDetailsPage = () => {
             {/* Endpoints Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                API Endpoints
+                Modules & Endpoints
               </h2>
               <div className="flex gap-2">
                 <button
@@ -511,50 +619,91 @@ const ProjectDetailsPage = () => {
 
             {/* Endpoints List */}
             <div className="space-y-6">
-              {currentProject?.endpoints && currentProject.endpoints.length > 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                  {/* Default Module Header */}
-                  <div className="w-full flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100">
-                        API Endpoints
-                      </h3>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {currentProject.endpoints.length} endpoint{currentProject.endpoints.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Endpoints List */}
-                  <div className="border-t border-gray-200 dark:border-gray-700">
-                    {currentProject.endpoints.map((endpoint) => (
-                      <div
-                        key={endpoint._id}
-                        onClick={() => navigate(`/project/${currentProject._id}/endpoint/${endpoint._id}`)}
-                        className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                      >
-                        <div className="flex items-center gap-4">
-                          <span className={`px-3 py-1 rounded text-sm font-medium ${getMethodColor(endpoint.method)}`}>
-                            {endpoint.method}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                              {endpoint.path}
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {endpoint.summary}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
+              {currentProject?.modules && currentProject.modules.length > 0 ? (
+                currentProject.modules.map((module) => (
+                  <Accordion key={module._id} defaultExpanded className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <AccordionSummary
+                      expandIcon={<ExpandMore className="text-gray-500 dark:text-gray-400" />}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100">
+                            {module.name}
+                          </h3>
                           <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatDate(endpoint.updatedAt)}
+                            {module.endpoints?.length || 0} endpoint{(module.endpoints?.length || 0) !== 1 ? 's' : ''}
                           </span>
+                          {module.createdBy && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-600 dark:text-gray-400">
+                              <FiUsers size={12} />
+                              <span className="truncate max-w-24">{module.createdBy.name}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                           
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/project/${currentProject._id}/module/${module._id}`);
+                            }}
+                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          >
+                            <FiEye size={14} />
+                            View Details
+                          </button>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleModuleMenuOpen(e, module);
+                            }}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          >
+                            <MoreVert />
+                          </IconButton>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </AccordionSummary>
+                    <AccordionDetails className="p-0">
+                      {module.endpoints && module.endpoints.length > 0 ? (
+                        <div className="border-t border-gray-200 dark:border-gray-700">
+                          {module.endpoints.map((endpoint) => (
+                            <div
+                              key={endpoint._id}
+                              onClick={() => navigate(`/project/${currentProject._id}/module/${module._id}/endpoint/${endpoint._id}`)}
+                              className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                            >
+                              <div className="flex items-center gap-4">
+                                <span className={`px-3 py-1 rounded text-sm font-medium ${getMethodColor(endpoint.method)}`}>
+                                  {endpoint.method}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                                    {endpoint.path}
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    {endpoint.summary}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  {formatDate(endpoint.updatedAt)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="border-t border-gray-200 dark:border-gray-700 p-6 text-center text-gray-500 dark:text-gray-400">
+                          No endpoints in this module yet
+                        </div>
+                      )}
+                    </AccordionDetails>
+                  </Accordion>
+                ))
               ) : (
                 <div className="text-center py-16">
                   <div className="bg-gray-100 dark:bg-gray-800 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
@@ -598,7 +747,10 @@ const ProjectDetailsPage = () => {
                     <FiCode size={20} className="text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentProject?.endpoints?.length || 0}</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {currentProject?.totalEndpoints || 
+                       (currentProject?.modules?.reduce((total, module) => total + (module.endpoints?.length || 0), 0) || 0)}
+                    </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Endpoints</div>
                   </div>
                 </div>
@@ -610,7 +762,9 @@ const ProjectDetailsPage = () => {
                     <FiFolder size={20} className="text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">1</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {currentProject?.totalModules || currentProject?.modules?.length || 0}
+                    </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">Modules</div>
                   </div>
                 </div>
@@ -771,6 +925,37 @@ const ProjectDetailsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Module Menu */}
+      <Menu
+        anchorEl={moduleMenuAnchor}
+        open={Boolean(moduleMenuAnchor)}
+        onClose={handleModuleMenuClose}
+        PaperProps={{
+          className: "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg",
+          style: { zIndex: 9999 }
+        }}
+        MenuListProps={{
+          className: "py-1"
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem 
+          onClick={handleViewModuleDetails} 
+          className="text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 px-4 py-2"
+        >
+          <FiEye className="mr-3" size={16} />
+          View Details
+        </MenuItem>
+        <MenuItem 
+          onClick={handleShareModule} 
+          className="text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 px-4 py-2"
+        >
+          <FiShare2 className="mr-3" size={16} />
+          Share Module
+        </MenuItem>
+      </Menu>
     </div>
   );
 };

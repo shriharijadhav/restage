@@ -80,7 +80,7 @@ function RootRoute() {
 
   // If not authenticated, show welcome page
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+    <div className="w-full min-h-screen flex items-center justify-center bg-gradient-app py-12 px-4">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-700">
         <h1 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-4">
           Welcome to Restage
@@ -114,7 +114,7 @@ function AppContent() {
   useAppTheme();
   return (
     /* Overall app container: flex-col, min-h-screen, theme-aware */
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors">
+    <div className="flex flex-col min-h-screen bg-gradient-app text-gray-900 dark:text-gray-100 transition-colors">
       {/* Fixed Navbar at the top (h-16) */}
       <Navbar />
       {/* Content area below Navbar, may contain sidebar + main content or just full-width content */}
@@ -136,9 +136,9 @@ function AppContent() {
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/project/:id" element={<ProjectDetailsPage />} />
-              <Route path="/project/:projectName/:module/:endpointId" element={<EndpointDetailsPage />} />
-              <Route path="/project/:projectName/module/:moduleName" element={<ModuleDetailsPage />} />
+              <Route path="/project/:projectId" element={<ProjectDetailsPage />} />
+              <Route path="/project/:projectId/module/:moduleId/endpoint/:endpointId" element={<EndpointDetailsPage />} />
+              <Route path="/project/:projectId/module/:moduleId" element={<ModuleDetailsPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               {/* Add more protected routes here that need the sidebar */}

@@ -13,6 +13,10 @@ export default {
         'card': 'var(--color-bg-card)',
         'text-app': 'var(--color-text)',
       },
+      backgroundImage: {
+        'gradient-app': 'linear-gradient(to bottom right, #f9fafb, #f3f4f6, #e5e7eb)',
+        'gradient-app-dark': 'linear-gradient(to bottom right, #111827, #1f2937, #374151)',
+      },
     },
   },
   plugins: [],

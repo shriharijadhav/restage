@@ -42,7 +42,8 @@ const EXAMPLE_LANGUAGES = {
       }
       
       if (endpoint.requestBody) {
-        code += `const data = ${prettyJSON(endpoint.requestBody)};\n`;
+        const requestData = endpoint.requestBody.schema || endpoint.requestBody;
+        code += `const data = ${prettyJSON(requestData)};\n`;
       }
       
       code += `const response = await axios.${endpoint.method.toLowerCase()}(`;
@@ -78,7 +79,8 @@ const EXAMPLE_LANGUAGES = {
       }
       
       if (endpoint.requestBody) {
-        code += `data = ${prettyJSON(endpoint.requestBody)}\n`;
+        const requestData = endpoint.requestBody.schema || endpoint.requestBody;
+        code += `data = ${prettyJSON(requestData)}\n`;
       }
       
       code += `response = requests.${endpoint.method.toLowerCase()}(`;
@@ -118,7 +120,8 @@ const EXAMPLE_LANGUAGES = {
       }
       
       if (endpoint.requestBody) {
-        code += `body = ${prettyJSON(endpoint.requestBody)}\n`;
+        const requestData = endpoint.requestBody.schema || endpoint.requestBody;
+        code += `body = ${prettyJSON(requestData)}\n`;
       }
       
       code += `request = Net::HTTP::${endpoint.method.charAt(0).toUpperCase() + endpoint.method.slice(1).toLowerCase()}.new(uri)\n`;
@@ -216,7 +219,7 @@ const Specification = ({ endpoint }) => {
               <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Request Body Schema</h3>
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                 <pre className="text-xs text-gray-800 dark:text-gray-200 overflow-x-auto">
-                  <code>{prettyJSON(endpoint.requestBody)}</code>
+                  <code>{prettyJSON(endpoint.requestBody.schema || endpoint.requestBody)}</code>
                 </pre>
               </div>
             </div>
@@ -231,11 +234,11 @@ const Specification = ({ endpoint }) => {
           <div className="mb-4">
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Status Code</h3>
             <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusCodeColor(endpoint.statusCode)}`}>
-                {endpoint.statusCode}
+              <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusCodeColor(endpoint.responses?.[0]?.code || 200)}`}>
+                {endpoint.responses?.[0]?.code || 200}
               </span>
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {getStatusText(endpoint.statusCode)}
+                {getStatusText(endpoint.responses?.[0]?.code || 200)}
               </span>
             </div>
           </div>
@@ -245,7 +248,7 @@ const Specification = ({ endpoint }) => {
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Response Body</h3>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
               <pre className="text-xs text-gray-800 dark:text-gray-200 overflow-x-auto">
-                <code>{prettyJSON(endpoint.responseBody)}</code>
+                <code>{prettyJSON(endpoint.responses?.[0]?.schema || {})}</code>
               </pre>
             </div>
           </div>
@@ -326,7 +329,11 @@ const Specification = ({ endpoint }) => {
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">cURL</h3>
               <button
-                onClick={() => handleCopy(`curl -X ${endpoint.method} "${API_BASE_URL}${endpoint.path}"${endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}${endpoint.requestBody ? ` -d '${prettyJSON(endpoint.requestBody)}'` : ''}`)}
+                onClick={() => {
+                  const requestData = endpoint.requestBody?.schema || endpoint.requestBody;
+                  const curlCommand = `curl -X ${endpoint.method} "${API_BASE_URL}${endpoint.path}"${endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}${requestData ? ` -d '${prettyJSON(requestData)}'` : ''}`;
+                  handleCopy(curlCommand);
+                }}
                 className="flex items-center gap-1 px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
               >
                 <FiCopy size={12} />
@@ -336,7 +343,7 @@ const Specification = ({ endpoint }) => {
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
               <pre className="text-xs text-gray-800 dark:text-gray-200 overflow-x-auto">
                 <code>
-                  curl -X {endpoint.method} "{API_BASE_URL}{endpoint.path}"{endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}{endpoint.requestBody ? ` -d '${prettyJSON(endpoint.requestBody)}'` : ''}
+                  curl -X {endpoint.method} "{API_BASE_URL}{endpoint.path}"{endpoint.headers?.map(h => ` -H "${h.key}: ${h.value}"`).join('') || ''}{(endpoint.requestBody?.schema || endpoint.requestBody) ? ` -d '${prettyJSON(endpoint.requestBody?.schema || endpoint.requestBody)}'` : ''}
                 </code>
               </pre>
             </div>

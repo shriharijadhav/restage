@@ -268,13 +268,13 @@ const Playground = ({ endpoint }) => {
     setTimeout(() => {
       const response = {
         success: true,
-        statusCode: endpoint?.statusCode || 200,
+        statusCode: endpoint?.responses?.[0]?.code || 200,
         responseTime,
         headers: {
           'Content-Type': 'application/json',
           'X-Response-Time': `${responseTime}ms`
         },
-        body: endpoint?.responseBody || { success: true, message: 'Mock response' }
+        body: endpoint?.responses?.[0]?.schema || { success: true, message: 'Mock response' }
       };
       
       setMockResponse(response);

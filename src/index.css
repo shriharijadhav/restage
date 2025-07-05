@@ -15,6 +15,15 @@
   --color-text: #f3f4f6; /* dark: gray-100 */
 }
 
+/* Custom gradient background with darker colors */
+.bg-gradient-app {
+  background: linear-gradient(to bottom right, #f8fafc, #e2e8f0, #cbd5e1);
+}
+
+.dark .bg-gradient-app {
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #334155);
+}
+
 /* Example usage: apply these variables in your custom classes or extend Tailwind config */
 
 /* Remove global .dark background override to allow Tailwind dark:bg-gray-900 to work as intended */

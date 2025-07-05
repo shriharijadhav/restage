@@ -9,10 +9,14 @@
  * popular platforms like Stripe, GitHub, and Postman.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiCopy, FiShare2, FiFileText, FiPlay, FiTag, FiClock, FiUser } from 'react-icons/fi';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { setLoading, setError } from '../features/projectSlice';
+import projectService from '../services/projectService';
+import moduleService from '../services/moduleService';
+import { useSnackbar } from '../contexts/SnackbarContext';
 
 // Import components
 import Breadcrumb from '../components/endpoint/Breadcrumb';
@@ -30,17 +34,64 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.example.com';
 
 const EndpointDetailsPage = () => {
-  const { projectName, module: moduleName, endpointId } = useParams();
+  const { projectId, moduleId, endpointId } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { showError } = useSnackbar();
   const [activeTab, setActiveTab] = useState('specification');
   const [copied, setCopied] = useState(false);
+  const [endpoint, setEndpoint] = useState(null);
+  const [module, setModule] = useState(null);
+  const [project, setProject] = useState(null);
 
-  // Get current project and modules from Redux
-  const currentProject = useSelector(state => state.project.projects.find(p => p.name === projectName || p.id === projectName));
-  const modules = currentProject?.modules || [];
-  // Find the correct module and endpoint
-  const currentModule = modules.find(m => m.name === moduleName || m.id === moduleName);
-  const endpoint = currentModule?.endpoints.find(e => e.id === endpointId);
+  // Fetch endpoint data from API
+  useEffect(() => {
+    const fetchEndpointData = async () => {
+      if (!projectId || !moduleId || !endpointId) {
+        showError('Invalid endpoint parameters');
+        navigate('/dashboard');
+        return;
+      }
+
+      dispatch(setLoading(true));
+      try {
+        // Fetch project
+        const projectResult = await projectService.getProject(projectId);
+        if (!projectResult.success) {
+          showError(projectResult.error);
+          navigate('/dashboard');
+          return;
+        }
+        setProject(projectResult.project);
+
+        // Fetch module
+        const moduleResult = await moduleService.getModule(projectId, moduleId);
+        if (!moduleResult.success) {
+          showError(moduleResult.error);
+          navigate('/dashboard');
+          return;
+        }
+        setModule(moduleResult.module);
+
+        // Find endpoint in module
+        const foundEndpoint = moduleResult.module.endpoints.find(e => e._id === endpointId);
+        if (!foundEndpoint) {
+          showError('Endpoint not found');
+          navigate('/dashboard');
+          return;
+        }
+        setEndpoint(foundEndpoint);
+      } catch (error) {
+        console.error('Error fetching endpoint data:', error);
+        showError('Failed to fetch endpoint data');
+        navigate('/dashboard');
+      } finally {
+        dispatch(setLoading(false));
+      }
+    };
+
+    fetchEndpointData();
+  }, [projectId, moduleId, endpointId, dispatch, showError, navigate]);
 
   // Copy functions with feedback
   const handleCopy = async (text) => {
@@ -68,30 +119,26 @@ const EndpointDetailsPage = () => {
     }
   };
 
-  if (!currentProject || !currentModule || !endpoint) {
+  if (!project || !module || !endpoint) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-app flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Not Found</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">The requested resource does not exist.</p>
-          <button 
-            onClick={() => navigate('/dashboard')} 
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            Go to Dashboard
-          </button>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Loading...</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">Fetching endpoint details...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-app">
       {/* Breadcrumb Navigation */}
       <Breadcrumb 
-        projectName={projectName}
-        module={moduleName}
-        endpointTitle={endpoint.title || endpoint.path}
+        projectName={project.name}
+        projectId={projectId}
+        module={module.name}
+        moduleId={moduleId}
+        endpointTitle={endpoint.summary || endpoint.path}
       />
 
       {/* Enhanced Endpoint Header */}
@@ -107,10 +154,10 @@ const EndpointDetailsPage = () => {
               </code>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {endpoint.title || endpoint.path}
+              {endpoint.summary || endpoint.path}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-lg">
-              {endpoint.doc || endpoint.description || 'API endpoint documentation and reference'}
+              {endpoint.description || 'API endpoint documentation and reference'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -137,28 +184,30 @@ const EndpointDetailsPage = () => {
             <FiTag className="text-gray-400" size={16} />
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Module</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{endpoint.module}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{module.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <FiClock className="text-gray-400" size={16} />
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Response Time</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{endpoint.responseTime}ms</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Created</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(endpoint.createdAt)}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <FiUser className="text-gray-400" size={16} />
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Created By</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{endpoint.createdBy}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Updated</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(endpoint.updatedAt)}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <FiClock className="text-gray-400" size={16} />
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Last Updated</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(endpoint.lastModified)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Tags</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {endpoint.tags?.length > 0 ? endpoint.tags.join(', ') : 'None'}
+              </p>
             </div>
           </div>
         </div>

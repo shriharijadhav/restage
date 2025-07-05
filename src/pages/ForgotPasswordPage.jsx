@@ -115,7 +115,7 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+    <div className="w-full min-h-screen flex items-center justify-center bg-gradient-app py-12 px-4">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-700">
         {/* Header */}
         <div className="mb-8">
@@ -137,8 +137,6 @@ const ForgotPasswordPage = () => {
             {step === 3 && 'Create a new password for your account'}
           </p>
         </div>
-
-
 
         {/* Step 1: Email Input */}
         {step === 1 && (

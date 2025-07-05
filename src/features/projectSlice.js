@@ -50,46 +50,7 @@ const projectSlice = createSlice({
       state.error = null;
     },
     
-    // Endpoint actions
-    addEndpoint(state, action) {
-      const { projectId, endpoint } = action.payload;
-      const project = state.projects.find(p => p._id === projectId);
-      if (project) {
-        project.endpoints.push(endpoint);
-      }
-      if (state.currentProject && state.currentProject._id === projectId) {
-        state.currentProject.endpoints.push(endpoint);
-      }
-      state.error = null;
-    },
-    updateEndpoint(state, action) {
-      const { projectId, endpointId, endpoint } = action.payload;
-      const project = state.projects.find(p => p._id === projectId);
-      if (project) {
-        const index = project.endpoints.findIndex(e => e._id === endpointId);
-        if (index !== -1) {
-          project.endpoints[index] = endpoint;
-        }
-      }
-      if (state.currentProject && state.currentProject._id === projectId) {
-        const index = state.currentProject.endpoints.findIndex(e => e._id === endpointId);
-        if (index !== -1) {
-          state.currentProject.endpoints[index] = endpoint;
-        }
-      }
-      state.error = null;
-    },
-    deleteEndpoint(state, action) {
-      const { projectId, endpointId } = action.payload;
-      const project = state.projects.find(p => p._id === projectId);
-      if (project) {
-        project.endpoints = project.endpoints.filter(e => e._id !== endpointId);
-      }
-      if (state.currentProject && state.currentProject._id === projectId) {
-        state.currentProject.endpoints = state.currentProject.endpoints.filter(e => e._id !== endpointId);
-      }
-      state.error = null;
-    },
+
   },
 });
 
@@ -100,10 +61,7 @@ export const {
   setCurrentProject, 
   addProject, 
   updateProject, 
-  deleteProject, 
-  addEndpoint, 
-  updateEndpoint, 
-  deleteEndpoint 
+  deleteProject
 } = projectSlice.actions;
 
 export default projectSlice.reducer; 
