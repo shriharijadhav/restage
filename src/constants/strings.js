@@ -272,9 +272,44 @@ export const ENDPOINTS = {
   // Playground
   LANGUAGE: 'Language:',
   SEND_REQUEST: 'Send Request',
+  SENDING: 'Sending...',
   CLICK_TO_SEE_RESPONSE: 'Click "Send Request" to see the response',
   COPY_URL: 'Copy URL',
   COPIED: 'Copied!',
+  COPY: 'Copy',
+  RESET: 'Reset',
+  ADD: '+ Add',
+  RESPONSE: 'Response',
+  HEADERS: 'Headers',
+  QUERY_PARAMETERS: 'Query Parameters',
+  REQUEST_BODY: 'Request Body',
+  ENTER_JSON_REQUEST_BODY: 'Enter JSON request body...',
+  NO_ENDPOINT_DATA: 'No endpoint data available',
+  CURL_COMMAND: 'cURL Command',
+  MOCK_RESPONSE: 'Mock response',
+  REQUEST_VALIDATION_PASSED: 'Request validation passed! Response sent.',
+  
+  // Validation messages
+  MISSING_REQUIRED_REQUEST_BODY: 'Missing required request body. Please provide a valid request body.',
+  MISSING_REQUIRED_FIELDS_IN_REQUEST_BODY: 'Missing required field(s) in request body:',
+  INVALID_JSON_IN_REQUEST_BODY: 'Invalid JSON in request body. Please check your syntax.',
+  MISSING_REQUIRED_HEADERS: 'Missing required header(s):',
+  MISSING_REQUIRED_QUERY_PARAMETERS: 'Missing required query parameter(s):',
+  EXTRA_HEADERS_PROVIDED: 'Extra header(s) provided:',
+  EXTRA_QUERY_PARAMETERS_PROVIDED: 'Extra query parameter(s) provided:',
+  
+  // Error messages
+  INVALID_ENDPOINT_PARAMETERS: 'Invalid endpoint parameters',
+  ENDPOINT_NOT_FOUND: 'Endpoint not found',
+  FAILED_TO_FETCH_ENDPOINT_DATA: 'Failed to fetch endpoint data',
+  
+  // UI strings
+  COPY_URL: 'Copy URL',
+  SHARE: 'Share',
+  LOADING: 'Loading...',
+  FETCHING_ENDPOINT_DETAILS: 'Fetching endpoint details...',
+  API_ENDPOINT_DOCUMENTATION_REFERENCE: 'API endpoint documentation and reference',
+  NONE: 'None',
   
   // Meta info
   CREATED_BY: 'Created by',

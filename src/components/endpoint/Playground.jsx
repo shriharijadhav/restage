@@ -5,7 +5,7 @@
  * - Editable headers, query parameters, and request body
  * - Multiple backend language options (Node.js, Python, Ruby)
  * - Language-specific cURL command generation
- * - Mock response simulation
+ * - Mock response simulation with validation
  * - Input presets and reset functionality
  */
 
@@ -16,6 +16,8 @@ import {
   copyToClipboard,
   getStatusCodeColor
 } from '../../utils/endpointUtils';
+import { useSnackbar } from '../../contexts/SnackbarContext';
+import { ENDPOINTS } from '../../constants/strings';
 
 // Environment configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.example.com';
@@ -212,9 +214,113 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [mockResponse, setMockResponse] = useState(null);
   const [copied, setCopied] = useState(false);
+  const { showError, showWarning, showSuccess } = useSnackbar();
 
   // Generate cURL for selected language
   const generatedCurl = BACKEND_LANGUAGES[selectedLanguage]?.curlGenerator(endpoint, playgroundData, baseUrl) || '';
+
+  // Validation functions
+  const validateHeaders = () => {
+    if (!endpoint.headers || endpoint.headers.length === 0) {
+      return { isValid: true, missing: [] };
+    }
+    const requiredHeaders = endpoint.headers.filter(h => h.key && h.value);
+    const providedHeaders = playgroundData.headers.filter(h => h.key && h.value);
+    const missingHeaders = requiredHeaders.filter(required =>
+      !providedHeaders.some(provided =>
+        provided.key.toLowerCase() === required.key.toLowerCase() &&
+        provided.value === required.value
+      )
+    );
+    return {
+      isValid: missingHeaders.length === 0,
+      missing: missingHeaders.map(h => h.key)
+    };
+  };
+
+  const validateQueryParams = () => {
+    if (!endpoint.queryParams || endpoint.queryParams.length === 0) {
+      return { isValid: true, missing: [] };
+    }
+    const requiredParams = endpoint.queryParams.filter(p => p.key && p.value);
+    const providedParams = playgroundData.queryParams.filter(p => p.key && p.value);
+    const missingParams = requiredParams.filter(required =>
+      !providedParams.some(provided =>
+        provided.key.toLowerCase() === required.key.toLowerCase() &&
+        provided.value === required.value
+      )
+    );
+    return {
+      isValid: missingParams.length === 0,
+      missing: missingParams.map(p => p.key)
+    };
+  };
+
+  const validateRequestBody = () => {
+    if (!endpoint.requestBody) {
+      return { isValid: true };
+    }
+    if (!playgroundData.requestBody.trim()) {
+      return { isValid: false, error: ENDPOINTS.MISSING_REQUIRED_REQUEST_BODY };
+    }
+    try {
+      const parsedBody = JSON.parse(playgroundData.requestBody);
+      const expectedSchema = endpoint.requestBody.schema || endpoint.requestBody;
+      const requiredFields = Object.keys(expectedSchema);
+      const providedFields = Object.keys(parsedBody);
+      const missingFields = requiredFields.filter(field => !providedFields.includes(field));
+      if (missingFields.length > 0) {
+        return {
+          isValid: false,
+          error: `${ENDPOINTS.MISSING_REQUIRED_FIELDS_IN_REQUEST_BODY} ${missingFields.join(', ')}`
+        };
+      }
+      return { isValid: true };
+    } catch (error) {
+      return { isValid: false, error: ENDPOINTS.INVALID_JSON_IN_REQUEST_BODY };
+    }
+  };
+
+  const validateRequest = () => {
+    const headerValidation = validateHeaders();
+    const queryValidation = validateQueryParams();
+    const bodyValidation = validateRequestBody();
+    const errors = [];
+    const warnings = [];
+    if (!headerValidation.isValid) {
+      errors.push(`${ENDPOINTS.MISSING_REQUIRED_HEADERS} ${headerValidation.missing.join(', ')}`);
+    }
+    if (!queryValidation.isValid) {
+      errors.push(`${ENDPOINTS.MISSING_REQUIRED_QUERY_PARAMETERS} ${queryValidation.missing.join(', ')}`);
+    }
+    if (!bodyValidation.isValid) {
+      errors.push(bodyValidation.error);
+    }
+    // Check for extra headers/params that might be unnecessary
+    if (endpoint.headers && endpoint.headers.length > 0) {
+      const extraHeaders = playgroundData.headers.filter(provided =>
+        provided.key && provided.value &&
+        !endpoint.headers.some(required =>
+          required.key.toLowerCase() === provided.key.toLowerCase()
+        )
+      );
+      if (extraHeaders.length > 0) {
+        warnings.push(`${ENDPOINTS.EXTRA_HEADERS_PROVIDED} ${extraHeaders.map(h => h.key).join(', ')}`);
+      }
+    }
+    if (endpoint.queryParams && endpoint.queryParams.length > 0) {
+      const extraParams = playgroundData.queryParams.filter(provided =>
+        provided.key && provided.value &&
+        !endpoint.queryParams.some(required =>
+          required.key.toLowerCase() === provided.key.toLowerCase()
+        )
+      );
+      if (extraParams.length > 0) {
+        warnings.push(`${ENDPOINTS.EXTRA_QUERY_PARAMETERS_PROVIDED} ${extraParams.map(p => p.key).join(', ')}`);
+      }
+    }
+    return { isValid: errors.length === 0, errors, warnings };
+  };
 
   // Copy functions with feedback
   const handleCopy = async (text) => {
@@ -253,7 +359,7 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
     setPlaygroundData({
       headers: endpoint?.headers ? [...endpoint.headers] : [],
       queryParams: endpoint?.queryParams ? [...endpoint.queryParams] : [],
-      requestBody: endpoint?.requestBody ? prettyJSON(endpoint.requestBody) : ''
+      requestBody: endpoint?.requestBody ? prettyJSON(endpoint.requestBody.schema || endpoint.requestBody) : ''
     });
     setMockResponse(null);
   };
@@ -261,6 +367,29 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
   const sendMockRequest = async () => {
     setIsLoading(true);
     setMockResponse(null);
+
+    // Validate request against endpoint specification
+    const validation = validateRequest();
+
+    if (!validation.isValid) {
+      // Show errors and don't send response
+      validation.errors.forEach(error => {
+        showError(error);
+      });
+      validation.warnings.forEach(warning => {
+        showWarning(warning);
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Show warnings if any
+    validation.warnings.forEach(warning => {
+      showWarning(warning);
+    });
+
+    // Show success message for valid request
+    showSuccess(ENDPOINTS.REQUEST_VALIDATION_PASSED);
 
     // Simulate API call with random response time
     const responseTime = Math.floor(Math.random() * 200) + 50;
@@ -274,7 +403,7 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
           'Content-Type': 'application/json',
           'X-Response-Time': `${responseTime}ms`
         },
-        body: endpoint?.responses?.[0]?.schema || { success: true, message: 'Mock response' }
+        body: endpoint?.responses?.[0]?.schema || { success: true, message: ENDPOINTS.MOCK_RESPONSE }
       };
       
       setMockResponse(response);
@@ -292,7 +421,7 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
   if (!endpoint) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 dark:text-gray-400">No endpoint data available</p>
+        <p className="text-gray-500 dark:text-gray-400">{ENDPOINTS.NO_ENDPOINT_DATA}</p>
       </div>
     );
   }
@@ -304,7 +433,7 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
         <div className="flex items-center justify-between">
           {/* Language Selection */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Language:</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{ENDPOINTS.LANGUAGE}</span>
             <div className="flex gap-2">
               {Object.entries(BACKEND_LANGUAGES).map(([key, language]) => (
                 <button
@@ -331,14 +460,14 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors text-sm font-medium"
             >
               <FiPlay size={14} />
-              {isLoading ? 'Sending...' : 'Send Request'}
+              {isLoading ? ENDPOINTS.SENDING : ENDPOINTS.SEND_REQUEST}
             </button>
             <button
               onClick={resetToDefaults}
               className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm"
             >
               <FiRotateCcw size={14} />
-              Reset
+              {ENDPOINTS.RESET}
             </button>
           </div>
         </div>
@@ -351,14 +480,14 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <FiTerminal size={16} />
-              cURL Command
+              {ENDPOINTS.CURL_COMMAND}
             </h2>
             <button
               onClick={() => handleCopy(generatedCurl)}
               className="flex items-center gap-1 px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
             >
               <FiCopy size={12} />
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? ENDPOINTS.COPIED : ENDPOINTS.COPY}
             </button>
           </div>
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 max-h-24 overflow-y-auto">
@@ -370,7 +499,7 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
 
         {/* Mock Response */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Response</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">{ENDPOINTS.RESPONSE}</h2>
           {mockResponse ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -390,7 +519,7 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
           ) : (
             <div className="text-center py-6 text-gray-500 dark:text-gray-400">
               <FiPlay size={20} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Click "Send Request" to see the response</p>
+              <p className="text-sm">{ENDPOINTS.CLICK_TO_SEE_RESPONSE}</p>
             </div>
           )}
         </div>
@@ -401,12 +530,12 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
         {/* Headers */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Headers</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{ENDPOINTS.HEADERS}</h2>
             <button
               onClick={() => addKeyValue('headers')}
               className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
             >
-              + Add
+              {ENDPOINTS.ADD}
             </button>
           </div>
           <div className="space-y-2">
@@ -414,14 +543,14 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
               <div key={index} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Key"
+                  placeholder={ENDPOINTS.HEADER_KEY}
                   value={header.key}
                   onChange={(e) => updateKeyValue('headers', index, 'key', e.target.value)}
                   className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
                 <input
                   type="text"
-                  placeholder="Value"
+                  placeholder={ENDPOINTS.HEADER_VALUE}
                   value={header.value}
                   onChange={(e) => updateKeyValue('headers', index, 'value', e.target.value)}
                   className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -440,12 +569,12 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
         {/* Query Parameters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Query Parameters</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{ENDPOINTS.QUERY_PARAMETERS}</h2>
             <button
               onClick={() => addKeyValue('queryParams')}
               className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
             >
-              + Add
+              {ENDPOINTS.ADD}
             </button>
           </div>
           <div className="space-y-2">
@@ -453,14 +582,14 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
               <div key={index} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Key"
+                  placeholder={ENDPOINTS.QUERY_KEY}
                   value={param.key}
                   onChange={(e) => updateKeyValue('queryParams', index, 'key', e.target.value)}
                   className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
                 <input
                   type="text"
-                  placeholder="Value"
+                  placeholder={ENDPOINTS.QUERY_VALUE}
                   value={param.value}
                   onChange={(e) => updateKeyValue('queryParams', index, 'value', e.target.value)}
                   className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -480,11 +609,11 @@ const Playground = ({ endpoint, baseUrl = API_BASE_URL }) => {
       {/* Request Body */}
       {endpoint.requestBody && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Request Body</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">{ENDPOINTS.REQUEST_BODY}</h2>
           <textarea
             value={playgroundData.requestBody}
             onChange={(e) => setPlaygroundData(prev => ({ ...prev, requestBody: e.target.value }))}
-            placeholder="Enter JSON request body..."
+            placeholder={ENDPOINTS.ENTER_JSON_REQUEST_BODY}
             rows={4}
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono"
           />
